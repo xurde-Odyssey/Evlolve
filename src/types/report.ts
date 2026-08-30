@@ -1,5 +1,12 @@
 import type { ActivityKey, MeasurementType } from "@/types/activity";
 import type { Book } from "@/types/book";
+import type {
+  ExecutionState,
+  GapClassification,
+  ReliabilityState,
+  TargetRelationship,
+  DirectionSignal,
+} from "@/domain/evolve-engine/types";
 
 export type ReportPeriodKey =
   | "today"
@@ -30,6 +37,9 @@ export type TargetActualMetric = {
   unit: string;
   difference: number;
   variancePercent: number | null;
+  executionState?: ExecutionState;
+  rawCompletionRatio?: number | null;
+  commitmentFulfillment?: number | null;
 };
 
 export type DailyReportDatum = {
@@ -52,6 +62,12 @@ export type ActivityReport = {
   completedSessions?: number;
   missedSessions?: number;
   chartData?: DailyReportDatum[];
+  developmentSignals?: {
+    reliabilityState: ReliabilityState;
+    momentum: DirectionSignal;
+    gapClassification: GapClassification;
+    targetRelationship: TargetRelationship;
+  };
 };
 
 export type ConsistencyReportItem = {

@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": ".test-build",
+    "rootDir": ".",
+    "ignoreDeprecations": "6.0",
+    "types": ["node"],
+    "tsBuildInfoFile": ".test-build/tsconfig.test.tsbuildinfo"
+  },
+  "include": [
+    "src/domain/evolve-engine/**/*.ts",
+    "src/types/activity.ts",
+    "tests/**/*.test.ts"
+  ]
+}

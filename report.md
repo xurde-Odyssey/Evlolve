@@ -362,3 +362,141 @@ codex resume 01a03c77-95f4-7a82-afdd-b00d13c4abfb
 - Deferred to Phase 3: XP rewards, XP penalties, level thresholds, level gain/loss, Discipline scoring, consistency scoring, streak qualification, Streak Freeze earning/use rules, inactive-mode consequences, commitment capacity reduction/restoration, adaptive target generation, Daily Quest generation, daily closeout evaluation, Boss generation, Boss difficulty, Boss rejection/failure penalties, achievement qualification, title eligibility/loss/reactivation, Journey mutation, monthly analysis intelligence, Habit Zone readiness, recommendation systems, Supabase persistence, authentication, push notifications, offline synchronization, and backend APIs.
 - Phase 2 complete.
 - No Phase 3 algorithm logic was implemented.
+
+## Phase 3.1 - Evidence and Execution Foundation
+
+- Created the Evolve engine foundation under `src/domain/evolve-engine`.
+- Added immutable activity evidence contracts with `ActivityExecutionEvidence`, `EvidenceSource`, `EvidenceQuality`, `RequirementState`, `ExclusionState`, `DeadlineState`, and `ExecutionState`.
+- Preserved fact versus interpretation boundaries: raw evidence keeps target, actual, source, quality, timing, requirement state, deadline state, exclusion state, raw completion ratio, and capped commitment fulfillment.
+- Added requirement-state separation for `MISSED`, `NO_REQUIREMENT`, `EXCLUDED`, and `UNKNOWN`; these are not collapsed into a generic skipped/missed state.
+- Added execution classification in `execution/classifier.ts` with configurable `ExecutionClassificationPolicy`.
+- Supported execution outputs: `FULL`, `QUALIFYING_PARTIAL`, `ATTEMPT`, `INSUFFICIENT_EFFORT`, `MISSED`, and `EXCLUDED`.
+- Added raw output handling where numeric execution preserves uncapped `rawCompletionRatio` while separately storing capped `commitmentFulfillment`.
+- Added consistency contribution derivation in `execution/consistency.ts`; excluded and no-requirement states do not enter the denominator, while attempts remain evidence without completion-consistency credit.
+- Added reusable aggregation utilities for factual/derived reporting output.
+- Added Sunday-to-Saturday weekly aggregation in `aggregation/weekly.ts`.
+- Added calendar-month aggregation in `aggregation/monthly.ts` with activity-specific breakdowns.
+- Aggregation returns eligible requirements, execution counts, consistency contribution, consistency percentage, expected output, raw actual output, raw output ratio, effective output, and execution distribution.
+- Kept raw output and effective output separate so future recovery/make-up credit can be introduced without rewriting historical facts.
+- Added baseline contracts and a replaceable `BaselineEstimator` interface.
+- Added `RobustBaselineEstimator`, which separates peak capability from sustainable capability and limits the influence of one extreme observation.
+- Added confidence as an internal interpretation concept through `ConfidenceValue`.
+- Added target history contracts with previous target, new target, effective date, reason, recommendation reference, and user decision.
+- Added target history helpers that append new target records without overwriting historical targets.
+- Added an ActivityRecord-to-evidence adapter so existing recorded activity can be converted into standardized evidence without replacing the existing ActivityRecord model.
+- Added a development-only evidence inspection helper that returns raw evidence, weekly aggregation, monthly aggregation, and baseline estimates outside production.
+- Integrated Reports data contracts with engine-derived evidence fields on target-vs-actual metrics: execution state, raw completion ratio, and capped fulfillment.
+- No UI redesign was performed.
+- No XP, Current Level, Progression Rating, Boss generation, recommendation scoring, behavioral analysis, Discipline, level regression, achievement, title, or adaptive-target formula was implemented.
+- Added `tests/evolve-engine.test.ts` with 12 unit tests covering classification, excess output preservation, proportional partial consistency, attempt behavior, missed preservation, excluded/no-requirement distinction, robust baseline behavior, peak/sustainable separation, Sunday-to-Saturday aggregation, immutable aggregation, and target history preservation.
+- Added `tsconfig.test.json` and a `npm test` script using TypeScript compilation into `.test-build` plus Node's built-in test runner.
+- Added `.test-build` to `.gitignore` and ESLint ignores so generated test output is not linted or committed.
+- Validation passed with `npm test`.
+- Validation passed with `npm run typecheck`.
+- Validation passed with `npm run lint`.
+- Validation passed with `npm run build`.
+- Deferred to Phase 3.2 and later: final consistency scoring, Discipline, XP rewards/penalties, level progression/regression, Progression Rating, Boss generation, challenge difficulty, recommendation scoring, behavioral analysis, inactive/recovery consequences, streak-freeze eligibility, achievement/title qualification, adaptive targets, Supabase persistence, and production debug tooling.
+
+## Phase 3.2 - Consistency, Reliability & Capability Engine
+
+- Extended the existing `src/domain/evolve-engine` architecture instead of creating duplicate execution, evidence, aggregation, or baseline models.
+- Added shared signal contracts for consistency summaries, reliability, attendance, capability, target relationship, gap classification, period comparison, and composed activity development state.
+- Preserved the separation between execution, consistency, and capability throughout the engine.
+- Added `src/domain/evolve-engine/consistency/summary.ts` for activity-level consistency over current week, previous week, current month, previous month, and rolling recent history.
+- Consistency summaries now include eligible opportunities, full completions, qualifying partials, attempts, insufficient efforts, misses, exclusions, total consistency credit, consistency ratio, scheduled distribution, execution distribution, recent direction, confidence, and internal pattern signals.
+- Added internal pattern signals for miss clusters, consecutive misses, full clusters, recovery after misses, partial-heavy execution, attempt ratio, stability, and repeated weak day-of-week patterns.
+- Added `src/domain/evolve-engine/reliability/attendance.ts` to preserve attendance/show-up evidence separately from completion consistency credit.
+- Added `src/domain/evolve-engine/reliability/reliability.ts` with bounded reliability value, confidence, state, and supporting signals.
+- Reliability state supports `UNKNOWN`, `UNSTABLE`, `DEVELOPING`, `RELIABLE`, `HIGHLY_RELIABLE`, `DETERIORATING`, and `REBUILDING`.
+- Reliability considers consistency, attendance, miss clustering, recent direction, volatility, and evidence sufficiency without treating one isolated miss as collapse.
+- Added `src/domain/evolve-engine/capability/estimator.ts` for robust capability estimation.
+- Capability now separates sustainable, peak, recent, and established capability.
+- Capability includes confidence, robust volatility, momentum, direction, sample counts, qualifying sample counts, policy type, and baseline state.
+- Capability policy supports future quantitative, frequency, milestone, and binary capability models without solving every activity family now.
+- The estimator uses median/trimmed/winsorized robust centers rather than a plain arithmetic average as the sole standard.
+- Peak capability remains independent from sustainable capability and is not used as the default target.
+- Recent capability can diverge from established capability so deterioration, improvement, comeback, and rebuilding evidence can be represented without erasing history.
+- Baseline state transitions remain conservative: new evidence starts as `NEW`/`BUILDING`, stable repeated evidence can become `ESTABLISHED`, and repeated divergence from an established baseline can become `REBUILDING`.
+- Added `src/domain/evolve-engine/target/relationship.ts` to classify target relationship as unknown, below capability, appropriate, challenging, or potentially unsustainable.
+- Added `src/domain/evolve-engine/gap/classifier.ts` to distinguish no meaningful gap, discipline gap, capability gap, mixed gap, and insufficient evidence.
+- Gap classification uses attendance, consistency, reliability, target relationship, and capability confidence; it returns supporting evidence only and does not change targets or apply consequences.
+- Added `src/domain/evolve-engine/comparison/comparison.ts` for me-vs-me period comparisons with absolute change, relative change, direction, and confidence.
+- Added `src/domain/evolve-engine/development/activity-state.ts` as the reusable `ActivityDevelopmentState` builder for later Phase 3 systems.
+- Extended the development-only inspector to include activity development states, including consistency, attendance, reliability, capability, target relationship, and gap classification.
+- Added non-visual Reports data integration: `ActivityReport` can now carry engine-derived development signals while the current UI design remains unchanged.
+- Added `src/domain/evolve-engine/internal/statistics.ts` for reusable robust statistical helpers.
+- Added `tests/evolve-engine-phase-3-2.test.ts` with Phase 3.2 coverage.
+- Test coverage now verifies stable capability, outlier handling, gradual sustainable-capability movement, rebuilding evidence, poor-session caution, exceptional-session caution, volatility, attendance versus consistency, excluded opportunity behavior, miss-cluster reliability, capability gap, discipline gap, mixed gap, insufficient evidence, target relationship, period comparison, and raw evidence immutability.
+- Existing Phase 3.1 tests remain intact and passing.
+- Validation passed with `npm test` across 29 tests.
+- Validation passed with `npm run typecheck`.
+- Validation passed with `npm run lint`.
+- Validation passed with `npm run build`.
+- No UI redesign, XP, Current Level, Progression Rating, Boss generation, achievement logic, adaptive target recommendation, commitment-capacity change, demotion, behavioral interference, Supabase persistence, or final hidden anti-gaming formula was implemented.
+- Deferred to Phase 3.3 and later: final progression scoring, XP effects, level movement, Progression Rating, recommendation generation, Boss generation/difficulty, behavioral interference analysis, achievement/title qualification, adaptive targets, capacity changes, demotion rules, and production persistence.
+
+## Phase 3.3 - Behavior Intelligence & Development Pillars
+
+- Extended the existing `src/domain/evolve-engine` architecture without duplicating Phase 3.1 evidence or Phase 3.2 activity-state models.
+- Added high-level development pillar contracts for `HEALTH`, `DISCIPLINE`, `CAPABILITY`, and `BALANCE`.
+- Added configurable activity-to-pillar contribution mapping with primary, secondary, and supporting roles.
+- Added `DevelopmentPillarState` with direction, confidence, supporting activities, weak activities, evidence summary, recent state, established state, stability, momentum, and pressure flags.
+- Added immutable `BehaviorEvent` facts for non-development behavior observations such as lifestyle and restricted behaviors.
+- Added behavior categories: `DEVELOPMENT`, `LIFESTYLE`, and `RESTRICTED`.
+- Added `RestraintContract` architecture supporting future `ZERO`, `FREQUENCY_CAP`, `QUANTITY_CAP`, `SPACING_RULE`, and `REDUCTION_TARGET` modes.
+- Added `evaluateRestraintContract` for factual restraint status, occurrences, allowed occurrences, violations, adherence, confidence, and evidence references.
+- Preserved the distinction between behavior occurrence and restraint violation.
+- Added `detectBehaviorInterference`, which detects repeated associations between behavior events and weaker development execution without claiming causation.
+- Interference detection supports configurable lookahead windows and compares post-behavior evidence against targets and available personal capability state.
+- Interference signals return impact direction, estimated strength, confidence, sample count, recurring pattern, evidence references, and careful non-causal explanation text.
+- Added `BehavioralFrictionState` as a structured aggregate of repeated interference and restraint-violation evidence.
+- Added `BehavioralDebtState` as a downstream interpretation layer only; it does not affect level, XP, Bosses, or progression.
+- Added development pressure signals by pillar, driven by core weaknesses and interference evidence without generating prescriptions or Bosses.
+- Added conservative pillar imbalance detection.
+- Added Core Weakness signals for serious Core commitment neglect so strong performance in one area does not hide a separate weak Core area.
+- Added cross-domain `DisciplineDevelopmentState` based on reliability patterns, weaknesses, strengths, recent trend, and restraint adherence.
+- Added monthly behavior report model for future Reports.
+- Added structured development analysis model for future Profile Monthly Analysis.
+- Extended the development-only inspector with pillar states, behavior events, restraint evaluations, interference signals, behavioral friction, behavioral debt, and development pressure.
+- No user-facing UI redesign was performed.
+- No final Progression Rating, Current Level, level threshold, candidate-level confirmation, demotion, XP calculation, Boss-generation rule, recommendation ranking, commitment-capacity change, production anti-gaming penalty, or behavioral consequence was implemented.
+- Added `tests/evolve-engine-phase-3-3.test.ts`.
+- Phase 3.3 tests cover social activity with strong development, repeated behavior association, isolated behavior events, low-confidence associations, restraint within limit, restraint violations, repeated violation friction, BehaviorEvent immutability, Core weakness visibility, Health pressure targeting, no Behavioral Debt without deterioration, approved inactive/rest exclusions, cross-domain Discipline summary, capability aggregation preserving weak Core areas, low sample caution, and monthly behavior report wording.
+- Existing Phase 3.1 and Phase 3.2 tests remain passing.
+- Validation passed with `npm test` across 45 tests.
+- Validation passed with `npm run typecheck`.
+- Validation passed with `npm run lint`.
+- Validation passed with `npm run build`.
+- Deferred to Phase 3.4 and later: final Progression Rating, Current Level, level thresholds, candidate-level confirmation, demotion, final XP, Boss-generation rules, recommendation ranking, capacity changes, hidden production anti-gaming penalties, behavioral consequence models, persistence, and user-facing behavior analytics UI.
+
+## Phase 3.4 - Progression Rating & Current Level Engine
+
+- Extended the existing `src/domain/evolve-engine` architecture with progression modules; no React component formulas or UI redesigns were added.
+- Added internal `ProgressionRatingBreakdown` with discipline, capability, health, balance, commitment execution, progression evidence, recovery contribution, Core Weakness pressure, behavioral friction pressure, instability pressure, rebuilding pressure, confidence, and final hidden rating.
+- Added `calculateProgressionRating` as a configurable internal rating engine consuming Activity Development State, pillar states, Core Weakness, Behavioral Friction/Debt, development pressure, monthly evaluations, and recovery memory.
+- Kept Lifetime XP separate from Current Level; `lifetimeXp` is accepted only as contextual input and is not used to calculate the rating or Current Level.
+- Added private/replaceable progression policy and level threshold policy modules.
+- Added nonlinear level threshold mapping through `LevelThresholdPolicy`; level thresholds are centralized and not scattered through UI/components.
+- Added `LevelCandidateState` and candidate-level state-machine behavior.
+- Candidate levels now start when supported evidence crosses a threshold, accumulate evidence-based confirmation, tolerate modest fluctuation through hysteresis, and can be lost after sustained deterioration.
+- Confirmed candidate levels update Current Level, emit `LEVEL_CONFIRMED`, and can update Highest Level.
+- Added `LevelRiskState` and demotion/risk state-machine behavior.
+- Level risk now starts before demotion, requires sustained high-confidence deterioration to demote, and can recover to safe before demotion confirmation.
+- Added Highest Level history with permanent peak level, first/last reached timestamps, establishment strength, maintained duration, and supporting evidence summary.
+- Highest Level never decreases.
+- Added Level Establishment Strength based on maintained rating history, monthly outcomes, confidence, confirmation quality, and volatility.
+- Added Level Memory and recovery-state architecture with `NONE`, `EARLY_COMEBACK`, `ACTIVE_RECOVERY`, `NEAR_PREVIOUS_STANDARD`, and `PREVIOUS_STANDARD_RESTORED`.
+- Recovery advantage applies only toward previously proven territory, depends on establishment strength, weakens after repeated collapses, and ends at the previous Highest Level frontier.
+- Added rating history entries with timestamp, hidden rating, confidence, Current Level, Candidate Level, risk state, and major component summaries.
+- Added domain events for progression rating updates, candidate start/loss/confirmation, risk start/recovery, demotion, Highest Level update, recovery start, and previous-level restoration.
+- Added a clean Level Summary view model for future UI integration without exposing raw internal mechanics.
+- Extended the development-only inspector with progression rating and level state when current/highest level context is supplied.
+- Added `tests/evolve-engine-phase-3-4.test.ts`.
+- Phase 3.4 tests cover Lifetime XP separation, rating improvement, Core Weakness drag, overperformance saturation, different viable development profiles, low-confidence caution, monthly outcome evidence, candidate creation/confirmation/loss/hysteresis, one-bad-week demotion protection, level-at-risk, confirmed demotion, risk recovery, Highest Level permanence/update, recovery advantage, recovery frontier limits, repeated-collapse weakening, establishment rebuilding, and raw evidence immutability.
+- Existing Phase 3.1, 3.2, and 3.3 tests remain passing.
+- Validation passed with `npm test` across 69 tests.
+- Validation passed with `npm run typecheck`.
+- Validation passed with `npm run lint`.
+- Validation passed with `npm run build`.
+- No Lifetime XP implementation, final XP calculation, final Boss rules, recommendation ranking, commitment-capacity changes, production anti-gaming penalties, persistence, schema migration, or visible UI redesign was implemented.
+- Deferred to Phase 3.5 and later: final XP/Lifetime XP engine, progression impact policy tuning, Boss integration, recommendation ranking, capacity changes, production persistence, public UI presentation for candidate/risk states, final anti-gaming enforcement, and full monthly progression evaluation.

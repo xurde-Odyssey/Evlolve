@@ -2,6 +2,7 @@ node_modules
 .next
 out
 build
+.test-build
 .env
 .env*.local
 *.tsbuildinfo

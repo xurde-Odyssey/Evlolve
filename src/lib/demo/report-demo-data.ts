@@ -18,6 +18,7 @@ import {
   roundTo,
 } from "@/lib/reports/calculations";
 import { demoPersona } from "@/lib/demo/demo-persona";
+import { buildActivityDevelopmentState, classifyExecution } from "@/domain/evolve-engine";
 
 const reportPeriods = {
   today: {
@@ -680,16 +681,65 @@ function createActivityReport({
   actual: number;
   unit: string;
 }): ActivityReport {
+  const primaryMetric = createTargetActualMetric(metricLabel, target, actual, unit);
+  const developmentSignals = createDevelopmentSignals({
+    activityKey,
+    chartData,
+    unit,
+  });
+
   return {
     activityKey,
     activityLabel,
     measurementType,
-    primaryMetric: createTargetActualMetric(metricLabel, target, actual, unit),
+    primaryMetric,
     secondaryMetrics,
     requiredSessions,
     completedSessions,
     missedSessions,
     chartData,
+    developmentSignals,
+  };
+}
+
+function createDevelopmentSignals({
+  activityKey,
+  chartData,
+  unit,
+}: {
+  activityKey: ActivityReport["activityKey"];
+  chartData?: DailyReportDatum[];
+  unit: string;
+}): ActivityReport["developmentSignals"] {
+  if (!chartData || chartData.length === 0) {
+    return undefined;
+  }
+
+  const evidence = chartData.map((datum, index) =>
+    classifyExecution({
+      id: `report-${activityKey}-${index}`,
+      activityId: activityKey,
+      scheduledFor: new Date(Date.UTC(2026, 7, 23 + index)).toISOString(),
+      targetValue: datum.target,
+      actualValue: datum.actual,
+      unit,
+      source: "SYSTEM_DERIVED",
+      evidenceQuality: "STANDARD",
+      requirementState: "REQUIRED",
+      deadlineState: "NO_DEADLINE",
+    }),
+  );
+  const state = buildActivityDevelopmentState(evidence, {
+    activityId: activityKey,
+    anchorDate: "2026-08-28T00:00:00.000Z",
+    currentTargetValue: chartData[0]?.target,
+  });
+
+  return {
+    reliabilityState: state.reliability.state,
+    momentum: state.capability.momentum,
+    gapClassification: state.gapClassification.classification,
+    targetRelationship: state.targetRelationship.state,
   };
 }
 
@@ -699,6 +749,18 @@ function createTargetActualMetric(
   actual: number,
   unit: string,
 ): TargetActualMetric {
+  const evidence = classifyExecution({
+    id: `report-metric-${label.toLowerCase().replaceAll(" ", "-")}`,
+    activityId: label,
+    targetValue: target,
+    actualValue: actual,
+    unit,
+    requirementState: "REQUIRED",
+    deadlineState: "NO_DEADLINE",
+    source: "SYSTEM_DERIVED",
+    evidenceQuality: "STANDARD",
+  });
+
   return {
     label,
     target,
@@ -706,6 +768,9 @@ function createTargetActualMetric(
     unit,
     difference: roundTo(calculateVariance(actual, target), 1),
     variancePercent: roundToNullable(calculateVariancePercent(actual, target)),
+    executionState: evidence.executionState,
+    rawCompletionRatio: evidence.rawCompletionRatio ?? null,
+    commitmentFulfillment: evidence.commitmentFulfillment ?? null,
   };
 }
 
