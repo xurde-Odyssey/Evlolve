@@ -1,0 +1,175 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+
+  --card: #f5f5f5;
+  --card-foreground: #333;
+  --popover: oklch(100% 0 0);
+  --popover-foreground: oklch(14.5% 0 0);
+  --primary: #333;
+  --primary-foreground: oklch(98.5% 0 0);
+  --secondary: #f7f7f7;
+  --secondary-foreground: oklch(20.5% 0 0);
+  --muted: #f7f7f7;
+  --muted-foreground: oklch(55.6% 0 0);
+  --accent: oklch(95% 0 0);
+  --accent-foreground: oklch(20.5% 0 0);
+  --color-fd-accent: oklch(97% 0 0);
+  --color-fd-accent-foreground: oklch(20.5% 0 0);
+  --destructive: oklch(57.7% 0.245 27.325);
+  --destructive-foreground: #fafafa;
+  --border: oklch(94% 0 0);
+  --input: oklch(92.2% 0 0);
+  --ring: oklch(70.8% 0 0);
+  --chart-1: oklch(81% 0.117 11.638);
+  --chart-2: oklch(64.5% 0.246 16.439);
+  --chart-3: oklch(58.6% 0.253 17.585);
+  --chart-4: oklch(51.4% 0.222 16.935);
+  --chart-5: oklch(45.5% 0.188 13.697);
+  --radius: 0.625rem;
+  --sidebar: oklch(98.5% 0 0);
+  --sidebar-foreground: oklch(14.5% 0 0);
+  --sidebar-primary: oklch(20.5% 0 0);
+  --sidebar-primary-foreground: oklch(98.5% 0 0);
+  --sidebar-accent: oklch(97% 0 0);
+  --sidebar-accent-foreground: oklch(20.5% 0 0);
+  --sidebar-border: oklch(92.2% 0 0);
+  --sidebar-ring: oklch(70.8% 0 0);
+  --color-fd-primary: oklch(0% 0 0);
+  --surface: #f7f7f7;
+  --accent-pro: #f12e54;
+  --background: oklch(100% 0 0);
+  --foreground: #333;
+
+  --color-deep: var(--primary);
+  --color-mid: var(--accent-pro);
+  --color-soft: var(--secondary);
+  --color-warm: var(--background);
+
+  --surface-elevated: var(--card);
+  --foreground-muted: var(--muted-foreground);
+  --success: var(--accent-pro);
+  --warning: var(--primary);
+  --xp: var(--accent-pro);
+  --chrome-surface: var(--sidebar);
+  --emphasis-border: var(--sidebar-border);
+  --accent-subtle: color-mix(in srgb, var(--accent-pro) 10%, transparent);
+  --success-subtle: color-mix(in srgb, var(--accent-pro) 12%, transparent);
+  --warning-subtle: var(--muted);
+  --streak-calm: oklch(62% 0.13 238);
+  --streak-steady: oklch(55% 0.16 246);
+  --streak-focused: oklch(49% 0.16 254);
+  --streak-enduring: oklch(42% 0.14 263);
+  --streak-subtle: color-mix(in srgb, var(--streak-steady) 12%, transparent);
+  --boss: oklch(45% 0.15 350);
+  --boss-subtle: color-mix(in srgb, var(--boss) 12%, transparent);
+  --achievement: oklch(47% 0.11 82);
+  --achievement-subtle: color-mix(in srgb, var(--achievement) 12%, transparent);
+  --improvement-core-subtle: color-mix(in srgb, var(--primary) 7%, transparent);
+  --report-target: color-mix(in srgb, var(--foreground-muted) 42%, transparent);
+
+  --space-page-x: clamp(1rem, 2.5vw, 2rem);
+  --space-page-y: clamp(1rem, 2vw, 1.75rem);
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --shadow-soft: 0 18px 50px color-mix(in srgb, var(--primary) 10%, transparent);
+  --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--ring) 38%, transparent);
+  --motion-duration-fast: 140ms;
+  --motion-duration-base: 210ms;
+  --motion-duration-panel: 280ms;
+  --motion-ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--background);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  background:
+    radial-gradient(
+      circle at top left,
+      color-mix(in srgb, var(--accent-pro) 8%, transparent),
+      transparent 34rem
+    ),
+    var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+@keyframes panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent-pro) 16%, transparent);
+}
+
+.numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+.motion-panel {
+  animation: panel-enter var(--motion-duration-panel) var(--motion-ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+
+  .motion-panel {
+    animation: none;
+  }
+}
+
+@media print {
+  body {
+    background: var(--background);
+  }
+
+  button,
+  nav {
+    display: none !important;
+  }
+}
