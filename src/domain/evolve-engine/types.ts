@@ -729,3 +729,439 @@ export type LevelProgressionState = {
   events: ProgressionDomainEvent[];
   view: LevelSummaryViewModel;
 };
+
+export type BossFamily =
+  | "PROGRESSION"
+  | "RESTORATION"
+  | "DISCIPLINE"
+  | "SKILL"
+  | "ENDURANCE"
+  | "BREAKTHROUGH"
+  | "BALANCE"
+  | "COMEBACK"
+  | "CORRECTIVE";
+
+export type BossStatus =
+  | "OFFERED"
+  | "ACCEPTED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "FAILED"
+  | "REJECTED"
+  | "EXPIRED"
+  | "CANCELLED_BY_SYSTEM";
+
+export type BossDifficulty = "STANDARD" | "CHALLENGING" | "EDGE" | "RESTORATIVE";
+
+export type BossReasonCategory =
+  | "CAPABILITY_EDGE"
+  | "DISCIPLINE_WEAKNESS"
+  | "RESTORATION"
+  | "RECOVERY_MEMORY"
+  | "CORE_WEAKNESS"
+  | "BEHAVIOR_INTERFERENCE"
+  | "PLATEAU"
+  | "SKILL_EVIDENCE";
+
+export type BossReason = {
+  category: BossReasonCategory;
+  summaryKey: string;
+  supportingEvidence: string[];
+  confidence: number;
+  affectedActivityIds: string[];
+  affectedPillars: DevelopmentPillar[];
+};
+
+export type BossRequirement = {
+  activityId?: ActivityKey | string;
+  pillar?: DevelopmentPillar;
+  description: string;
+  targetValue?: number;
+  unit?: string;
+  evaluationType:
+    | "SINGLE_VALUE"
+    | "CUMULATIVE"
+    | "FREQUENCY"
+    | "CONSISTENCY"
+    | "DELIVERABLE";
+};
+
+export type BossCandidate = {
+  id: string;
+  family: BossFamily;
+  title: string;
+  status: "CANDIDATE";
+  reason: BossReason;
+  requirements: BossRequirement[];
+  difficulty: BossDifficulty;
+  confidence: number;
+  evidenceRefs: string[];
+  evidenceSignature: string;
+  generatedAt: string;
+  expiresAt?: string;
+};
+
+export type BossContract = Omit<BossCandidate, "status"> & {
+  status: BossStatus;
+  offeredAt: string;
+  acceptedAt?: string;
+  rejectedAt?: string;
+  completedAt?: string;
+  failedAt?: string;
+  expiresAt?: string;
+  actualResult?: number;
+  completionEvidenceRefs: string[];
+  outcomeQuality?: "NONE" | "PARTIAL_EFFORT" | "QUALIFIED" | "FRONTIER_EXTENDED" | "STANDARD_RESTORED";
+};
+
+export type BossHistoryRecord = {
+  bossId: string;
+  family: BossFamily;
+  activityId?: string;
+  pillar?: DevelopmentPillar;
+  status: BossStatus;
+  difficulty: BossDifficulty;
+  offeredAt: string;
+  resolvedAt?: string;
+  evidenceSignature: string;
+  outcomeQuality?: BossContract["outcomeQuality"];
+};
+
+export type BossDomainEventType =
+  | "BOSS_OFFERED"
+  | "BOSS_ACCEPTED"
+  | "BOSS_REJECTED"
+  | "BOSS_COMPLETED"
+  | "BOSS_FAILED"
+  | "BOSS_EXPIRED";
+
+export type BossDomainEvent = {
+  id: string;
+  type: BossDomainEventType;
+  occurredAt: string;
+  bossId: string;
+  family: BossFamily;
+  evidenceRefs: string[];
+};
+
+export type BossEligibilityResult = {
+  eligible: boolean;
+  candidates: BossCandidate[];
+  selectedBoss: BossCandidate | null;
+  suppressedReasons: string[];
+};
+
+export type TargetProgressionAction =
+  | "INCREASE"
+  | "MAINTAIN"
+  | "RECALIBRATE_DOWNWARD"
+  | "INTERMEDIATE_TARGET";
+
+export type TargetProgressionRecommendation = {
+  id: string;
+  activityId: ActivityKey | string;
+  commitmentId?: string;
+  action: TargetProgressionAction;
+  currentTargetValue: number;
+  proposedTargetValue?: number;
+  unit?: string;
+  sustainableSurplusRatio: number | null;
+  peakSurplusRatio: number | null;
+  confidence: number;
+  reason: string;
+  supportingEvidence: string[];
+  userDecisionRequired: boolean;
+  createdAt: string;
+};
+
+export type TargetAdaptationStatus =
+  | "NONE"
+  | "ADAPTING"
+  | "STABILIZING"
+  | "ESTABLISHED"
+  | "UNSUSTAINABLE";
+
+export type TargetAdaptationState = {
+  id: string;
+  activityId: ActivityKey | string;
+  previousTargetValue: number;
+  newTargetValue: number;
+  unit?: string;
+  status: TargetAdaptationStatus;
+  startedAt: string;
+  evidenceCount: number;
+  qualifyingCount: number;
+  underperformanceCount: number;
+  confidence: number;
+  protectionActive: boolean;
+  userRejectedRecalibration?: boolean;
+  evidenceRefs: string[];
+};
+
+export type RecommendationCategory =
+  | "INCREASE_TARGET"
+  | "MAINTAIN_TARGET"
+  | "RECALIBRATE_TARGET"
+  | "RESTORE_WEAK_AREA"
+  | "PRIORITIZE_CORE_AREA"
+  | "ADD_NEW_COMMITMENT"
+  | "DO_NOT_ADD_COMMITMENT"
+  | "TAKE_BOSS"
+  | "RESTORE_BALANCE"
+  | "ADDRESS_BEHAVIOR_PATTERN"
+  | "MAINTAIN_RECOVERY"
+  | "REBUILD_DISCIPLINE";
+
+export type RecommendationDecisionStatus =
+  | "PENDING"
+  | "ACCEPTED"
+  | "REJECTED"
+  | "EXPIRED"
+  | "SUPERSEDED";
+
+export type EvolveRecommendation = {
+  id: string;
+  category: RecommendationCategory;
+  title: string;
+  reason: string;
+  supportingEvidence: string[];
+  confidence: number;
+  urgency: "LOW" | "MODERATE" | "HIGH";
+  expectedDevelopmentValue: "LOW" | "MODERATE" | "HIGH";
+  affectedCommitments: string[];
+  affectedActivities: string[];
+  affectedPillars: DevelopmentPillar[];
+  proposedChange?: {
+    targetAction?: TargetProgressionAction;
+    targetValue?: number;
+    unit?: string;
+  };
+  userDecisionRequired: boolean;
+  status: RecommendationDecisionStatus;
+  createdAt: string;
+  expiresAt?: string;
+  evidenceSignature: string;
+};
+
+export type RecommendationHistoryRecord = Pick<
+  EvolveRecommendation,
+  "id" | "category" | "status" | "createdAt" | "evidenceSignature"
+> & {
+  resolvedAt?: string;
+};
+
+export type RecommendationEngineResult = {
+  primary: EvolveRecommendation | null;
+  secondary: EvolveRecommendation[];
+  candidates: EvolveRecommendation[];
+  suppressed: string[];
+};
+
+export type AntiGamingSignalType =
+  | "MINIMUM_QUALIFYING_PATTERN"
+  | "COMPRESSED_OUTPUT"
+  | "EXTREME_SPIKE"
+  | "REPEATED_BOSS_REJECTION"
+  | "ADAPTATION_EXPLOITATION"
+  | "ACTIVITY_FARMING";
+
+export type AntiGamingSignal = {
+  type: AntiGamingSignalType;
+  activityId?: string;
+  confidence: number;
+  evidenceRefs: string[];
+  internalOnly: true;
+};
+
+export type XpSourceType =
+  | "ACTIVITY_EXECUTION"
+  | "WEEKLY_CLOSEOUT"
+  | "MONTHLY_CLOSEOUT"
+  | "BOSS_COMPLETION"
+  | "PROGRESSION_EVENT"
+  | "ACHIEVEMENT_AWARD"
+  | "SYSTEM";
+
+export type XpCategory =
+  | "EXECUTION"
+  | "CONSISTENCY"
+  | "MONTHLY_COMMITMENT"
+  | "BOSS"
+  | "PROGRESSION"
+  | "ACHIEVEMENT"
+  | "RECOVERY_MILESTONE"
+  | "SYSTEM_ADJUSTMENT";
+
+export type XpTransaction = {
+  id: string;
+  userId?: string;
+  sourceType: XpSourceType;
+  sourceId: string;
+  category: XpCategory;
+  amount: number;
+  occurredAt: string;
+  reason: string;
+  evidenceRefs: string[];
+  policyVersion: string;
+};
+
+export type LifetimeXpSummary = {
+  totalLifetimeXp: number;
+  xpThisWeek: number;
+  xpThisMonth: number;
+  executionXp: number;
+  consistencyXp: number;
+  bossXp: number;
+  progressionXp: number;
+  achievementXp: number;
+  monthlyCommitmentXp: number;
+};
+
+export type AchievementEngineCategory =
+  | "MILESTONE"
+  | "MASTERY"
+  | "DISCIPLINE"
+  | "BOSS"
+  | "LIFETIME";
+
+export type AchievementVisibility = "VISIBLE" | "HIDDEN_UNTIL_EARNED";
+
+export type AchievementTier = "BRONZE" | "SILVER" | "GOLD" | "MASTER";
+
+export type AchievementEvaluationPolicy =
+  | "FIRST_ESTABLISHED_BASELINE"
+  | "FIRST_FULL_MONTH"
+  | "FIRST_CONFIRMED_LEVEL_UP"
+  | "FIRST_BOSS_COMPLETION"
+  | "BOSS_BREAKTHROUGH"
+  | "ESTABLISHED_NEW_CAPABILITY"
+  | "RECOVERED_PREVIOUS_STANDARD"
+  | "SUSTAINED_HIGH_DISCIPLINE"
+  | "MULTI_CORE_STABILITY"
+  | "MAJOR_SKILL_MILESTONE"
+  | "COMEBACK_COMPLETE"
+  | "FIRST_YEAR_OF_EVOLVE";
+
+export type AchievementDefinition = {
+  id: string;
+  key: string;
+  name: string;
+  category: AchievementEngineCategory;
+  description: string;
+  visibility: AchievementVisibility;
+  tier?: AchievementTier;
+  evaluationPolicy: AchievementEvaluationPolicy;
+  major: boolean;
+  rewardPolicy?: "NONE" | "SMALL" | "STANDARD";
+  policyVersion: string;
+};
+
+export type AchievementAward = {
+  id: string;
+  definitionId: string;
+  key: string;
+  name: string;
+  category: AchievementEngineCategory;
+  tier?: AchievementTier;
+  major: boolean;
+  earnedAt: string;
+  supportingEvidence: string[];
+  policyVersion: string;
+};
+
+export type TitleEligibilityState = "ELIGIBLE" | "INACTIVE";
+
+export type EarnedTitleRecord = {
+  id: string;
+  titleKey: string;
+  name: string;
+  sourceType: "ACHIEVEMENT" | "LEVEL" | "BOSS" | "MASTERY" | "PROGRESSION";
+  sourceId?: string;
+  earnedAt: string;
+  selected: boolean;
+};
+
+export type TitleEligibilityResult = {
+  title: EarnedTitleRecord;
+  eligibility: TitleEligibilityState;
+  reason: string;
+  confidence: number;
+};
+
+export type CommitmentCapacityStatus =
+  | "STABLE"
+  | "ELIGIBLE_TO_UNLOCK"
+  | "CONFIRMING_UNLOCK"
+  | "AT_RISK"
+  | "REDUCED"
+  | "REBUILDING";
+
+export type CommitmentCapacityState = {
+  currentCapacity: 3 | 4 | 5;
+  highestCapacity: 3 | 4 | 5;
+  candidateCapacity?: 4 | 5;
+  status: CommitmentCapacityStatus;
+  confidence: number;
+  reason: string;
+  qualifyingPeriods: number;
+  riskPeriods: number;
+  activeCommitmentCount: number;
+  canAddCommitment: boolean;
+  policyVersion: string;
+};
+
+export type JourneyProgressionEventType =
+  | "COMMITMENT_STARTED"
+  | "MAJOR_COMMITMENT_COMPLETED"
+  | "MAJOR_TARGET_ESTABLISHED"
+  | "LEVEL_MILESTONE_CONFIRMED"
+  | "MAJOR_ACHIEVEMENT"
+  | "BOSS_BREAKTHROUGH"
+  | "PREVIOUS_STANDARD_RECOVERED"
+  | "COMMITMENT_CAPACITY_UNLOCKED"
+  | "MAJOR_SKILL_MILESTONE";
+
+export type JourneyProgressionEvent = {
+  id: string;
+  type: JourneyProgressionEventType;
+  occurredAt: string;
+  title: string;
+  description?: string;
+  sourceId: string;
+  evidenceRefs: string[];
+  policyVersion: string;
+};
+
+export type WeeklyDevelopmentSnapshot = {
+  id: string;
+  periodStart: string;
+  periodEnd: string;
+  policyVersion: string;
+  consistency: EvidenceAggregation;
+  activityStates: ActivityDevelopmentState[];
+  pillarStates: DevelopmentPillarState[];
+  progressionRating: ProgressionRatingBreakdown;
+  level: LevelSummaryViewModel;
+  behavioralFriction?: BehavioralFrictionState;
+  coreWeaknesses: CoreWeaknessSignal[];
+  commitmentCapacity: CommitmentCapacityState;
+  xpEarned: number;
+  recommendations: EvolveRecommendation[];
+};
+
+export type MonthlyDevelopmentSnapshot = WeeklyDevelopmentSnapshot & {
+  monthlyOutcomes: MonthlyEvaluationRecord[];
+  achievementsEarned: AchievementAward[];
+  bossOutcomes: BossHistoryRecord[];
+  journeyEvents: JourneyProgressionEvent[];
+};
+
+export type CloseoutResult = {
+  idempotencyKey: string;
+  xpTransactions: XpTransaction[];
+  achievementsEarned: AchievementAward[];
+  journeyEvents: JourneyProgressionEvent[];
+  capacity: CommitmentCapacityState;
+  weeklySnapshot?: WeeklyDevelopmentSnapshot;
+  monthlySnapshot?: MonthlyDevelopmentSnapshot;
+};
