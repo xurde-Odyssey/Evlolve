@@ -9,6 +9,8 @@ export type ProgressionRatingPolicy = {
   behavioralPressureLimit: number;
   candidateHysteresis: number;
   riskHysteresis: number;
+  maxDemotionStep: number;
+  stagnationPressureLimit: number;
 };
 
 export const defaultProgressionRatingPolicy = {
@@ -20,6 +22,8 @@ export const defaultProgressionRatingPolicy = {
   behavioralPressureLimit: 9,
   candidateHysteresis: 2.5,
   riskHysteresis: 4,
+  maxDemotionStep: 4,
+  stagnationPressureLimit: 36,
 } satisfies ProgressionRatingPolicy;
 
 export const defaultLevelThresholdPolicy = {

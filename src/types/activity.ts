@@ -30,6 +30,10 @@ export type ActivityDefinition = {
 
 export type ActivityRecord = {
   id: string;
+  idempotencyKey?: string;
+  commitmentId?: string;
+  targetVersionId?: string;
+  scheduledRequirementId?: string;
   activityKey: ActivityKey;
   activityLabel: string;
   measurement: {

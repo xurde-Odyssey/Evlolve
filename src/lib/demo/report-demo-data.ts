@@ -86,7 +86,7 @@ export const demoReadingActivityRecords = [
   {
     id: "reading-atomic-aug-17",
     activityKey: "reading",
-    activityLabel: "Reading",
+    activityLabel: "Bookaholic",
     bookId: "atomic-habits",
     pagesRead: 24,
     occurredAt: "2026-08-17T19:10:00.000Z",
@@ -94,7 +94,7 @@ export const demoReadingActivityRecords = [
   {
     id: "reading-atomic-aug-18",
     activityKey: "reading",
-    activityLabel: "Reading",
+    activityLabel: "Bookaholic",
     bookId: "atomic-habits",
     pagesRead: 31,
     occurredAt: "2026-08-18T18:20:00.000Z",
@@ -102,7 +102,7 @@ export const demoReadingActivityRecords = [
   {
     id: "reading-atomic-aug-21",
     activityKey: "reading",
-    activityLabel: "Reading",
+    activityLabel: "Bookaholic",
     bookId: "atomic-habits",
     pagesRead: 42,
     occurredAt: "2026-08-21T20:30:00.000Z",
@@ -110,7 +110,7 @@ export const demoReadingActivityRecords = [
   {
     id: "reading-atomic-aug-25",
     activityKey: "reading",
-    activityLabel: "Reading",
+    activityLabel: "Bookaholic",
     bookId: "atomic-habits",
     pagesRead: 39,
     occurredAt: "2026-08-25T15:40:00.000Z",
@@ -118,7 +118,7 @@ export const demoReadingActivityRecords = [
   {
     id: "reading-atomic-aug-27",
     activityKey: "reading",
-    activityLabel: "Reading",
+    activityLabel: "Bookaholic",
     bookId: "atomic-habits",
     pagesRead: 48,
     occurredAt: "2026-08-27T07:50:00.000Z",
@@ -126,7 +126,7 @@ export const demoReadingActivityRecords = [
   {
     id: "reading-atomic-aug-28",
     activityKey: "reading",
-    activityLabel: "Reading",
+    activityLabel: "Bookaholic",
     bookId: "atomic-habits",
     pagesRead: 24,
     occurredAt: "2026-08-28T18:10:00.000Z",
@@ -177,7 +177,7 @@ const todayActivities = [
   }),
   createActivityReport({
     activityKey: "water",
-    activityLabel: "Water",
+    activityLabel: "Deep Work",
     measurementType: "volume",
     metricLabel: "Volume",
     target: 2.5,
@@ -234,7 +234,7 @@ const thisWeekActivities = [
   }),
   createActivityReport({
     activityKey: "reading",
-    activityLabel: "Reading",
+    activityLabel: "Bookaholic",
     measurementType: "pages",
     metricLabel: "Pages",
     target: 150,
@@ -332,7 +332,7 @@ const thisMonthActivities = [
   }),
   createActivityReport({
     activityKey: "reading",
-    activityLabel: "Reading",
+    activityLabel: "Bookaholic",
     measurementType: "pages",
     metricLabel: "Pages",
     target: 720,
@@ -377,7 +377,7 @@ const previousMonthActivities = [
   }),
   createActivityReport({
     activityKey: "reading",
-    activityLabel: "Reading",
+    activityLabel: "Bookaholic",
     measurementType: "pages",
     metricLabel: "Pages",
     target: 600,
@@ -555,7 +555,7 @@ function createPeriodReport({
         },
         {
           activityKey: "reading",
-          activityLabel: "Reading",
+          activityLabel: "Bookaholic",
           consistencyPercent: 94,
           currentStreak: 31,
           bestStreak: 42,
@@ -641,7 +641,7 @@ function createPeriodReport({
       },
       {
         activityKey: "reading",
-        activityLabel: "Reading",
+          activityLabel: "Bookaholic",
         observationLabel: "3 weeks of data",
       },
       {

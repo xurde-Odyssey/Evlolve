@@ -1,9 +1,12 @@
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { ReportsWorkspace } from "@/components/reports/reports-workspace";
-import { demoReportsSnapshot } from "@/lib/demo/report-demo-data";
+import { getReportsViewModel } from "@/application/evolve";
+import { getCurrentEvolveState } from "@/application/evolve/server/queries";
 
-export default function ReportsPage() {
+export default async function ReportsPage() {
+  const state = await getCurrentEvolveState();
+
   return (
     <PageContainer>
       <PageHeader
@@ -11,7 +14,7 @@ export default function ReportsPage() {
         title="Reports & Analytics"
         description="Evidence from activity, commitments, reading, consistency, and progression history."
       />
-      <ReportsWorkspace snapshot={demoReportsSnapshot} />
+      <ReportsWorkspace snapshot={getReportsViewModel(state)} />
     </PageContainer>
   );
 }

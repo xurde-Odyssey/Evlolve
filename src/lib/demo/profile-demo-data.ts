@@ -49,7 +49,7 @@ export const demoProfile = {
       },
       {
         activityKey: "reading",
-        activityLabel: "Reading",
+      activityLabel: "Bookaholic",
         consistencyPercent: 88,
       },
       {
@@ -85,7 +85,7 @@ export const demoProfile = {
     },
     {
       id: "monthly-pages",
-      label: "Reading",
+      label: "Bookaholic",
       value: "768 pages",
       context: "this month",
     },

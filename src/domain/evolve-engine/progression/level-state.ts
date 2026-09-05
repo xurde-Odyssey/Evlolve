@@ -74,7 +74,9 @@ export function evaluateLevelProgression({
     events,
   });
   const finalLevel =
-    nextRisk.status === "DEMOTED" ? Math.max(1, nextRisk.supportedLevel) : confirmedLevel;
+    nextRisk.status === "DEMOTED"
+      ? Math.max(1, confirmedLevel - ratingPolicy.maxDemotionStep, nextRisk.supportedLevel)
+      : confirmedLevel;
 
   nextHighest = updateHighestLevel(nextHighest, finalLevel, now, events);
 
@@ -180,7 +182,7 @@ function evaluateCandidate({
   }
 
   const qualifyingPeriods =
-    (existing?.qualifyingPeriods ?? 0) + qualifyingPeriodCredit(monthlyEvaluations, rating);
+    (existing?.qualifyingPeriods ?? 0) + qualifyingPeriodCredit(monthlyEvaluations);
   const evidenceStrength = round(Math.min(1, rating.confidence * (rating.finalRating / Math.max(thresholdPolicy.thresholdForLevel(candidateLevel), 1))));
   const required = thresholdPolicy.confirmationPeriodsForLevel(candidateLevel);
   const status =
@@ -358,23 +360,22 @@ function createLevelView({
 
 function qualifyingPeriodCredit(
   monthlyEvaluations: readonly MonthlyEvaluationRecord[],
-  rating: ProgressionRatingBreakdown,
 ) {
   const last = monthlyEvaluations.at(-1);
   if (!last) {
-    return rating.confidence >= 0.8 ? 1 : 0;
+    return 0;
   }
 
   if (last.outcome === "FULL_COMPLETION") {
-    return 2;
+    return 1.25;
   }
 
   if (last.outcome === "STRONG_PASS") {
-    return 1.5;
+    return 1;
   }
 
   if (last.outcome === "PASS") {
-    return 1;
+    return 0.5;
   }
 
   return 0;

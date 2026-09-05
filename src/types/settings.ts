@@ -83,9 +83,10 @@ export type SystemControlledSetting = {
 export type SettingsSnapshot = {
   commitmentCapacity: number;
   activeCommitments: number;
-  progressionDeadlineLabel: "10:00 PM";
-  calendarBoundaryLabel: "12:00 AM";
-  reportingWeekLabel: "Sunday - Saturday";
+  warningThresholdLabel: string;
+  progressionDeadlineLabel: string;
+  calendarBoundaryLabel: string;
+  reportingWeekLabel: string;
   activityConfigurations: ActivityConfiguration[];
   customActivityDraft: CustomActivityDraft;
   inactiveMode: {

@@ -55,7 +55,7 @@ const activityConfigSeed: Record<
     measurementType: "pages",
     schedule: { type: "daily" },
     tier: "priority",
-    adaptiveTargetLabel: "30 pages",
+    adaptiveTargetLabel: "5 pages",
     freezeEligible: true,
   },
   coding: {
@@ -106,6 +106,7 @@ export const demoSettings = {
   activeCommitments: demoImprovements.areas.filter(
     (area) => area.status === "active",
   ).length,
+  warningThresholdLabel: "5:00 PM",
   progressionDeadlineLabel: "10:00 PM",
   calendarBoundaryLabel: "12:00 AM",
   reportingWeekLabel: "Sunday - Saturday",
@@ -144,7 +145,7 @@ export const demoSettings = {
       maxDurationDays: demoConsistency.inactiveLimitDays,
     },
     used: {
-      label: "Meditation",
+      label: "Mental Training",
       usedThisMonth: true,
       monthlyAllowance: 1,
       maxDurationDays: demoConsistency.inactiveLimitDays,

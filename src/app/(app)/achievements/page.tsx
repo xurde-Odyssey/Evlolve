@@ -1,9 +1,12 @@
 import { AchievementsWorkspace } from "@/components/achievements/achievements-workspace";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { demoAchievements } from "@/lib/demo/evolve-demo-data";
+import { getAchievementSnapshot } from "@/application/evolve";
+import { getCurrentEvolveState } from "@/application/evolve/server/queries";
 
-export default function AchievementsPage() {
+export default async function AchievementsPage() {
+  const state = await getCurrentEvolveState();
+
   return (
     <PageContainer>
       <PageHeader
@@ -11,7 +14,7 @@ export default function AchievementsPage() {
         title="Achievements & Titles"
         description="Permanent accomplishments and earned identity titles."
       />
-      <AchievementsWorkspace snapshot={demoAchievements} />
+      <AchievementsWorkspace snapshot={getAchievementSnapshot(state)} />
     </PageContainer>
   );
 }

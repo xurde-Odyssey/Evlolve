@@ -1,16 +1,17 @@
 import { ActivityLoggingWorkspace } from "@/components/activities/activity-logging-workspace";
 import { PageContainer } from "@/components/layout/page-container";
-import {
-  demoActivityRecords,
-  demoDailyQuests,
-} from "@/lib/demo/evolve-demo-data";
+import { getCurrentEvolveState } from "@/application/evolve/server/queries";
+import { isSupabaseAuthorityConfigured } from "@/lib/supabase/env";
+import { logActivityAction } from "./actions";
 
-export default function ActivitiesPage() {
+export default async function ActivitiesPage() {
+  const state = await getCurrentEvolveState();
+
   return (
     <PageContainer>
       <ActivityLoggingWorkspace
-        initialActivityRecords={demoActivityRecords}
-        quests={demoDailyQuests}
+        initialState={state}
+        logActivityAction={isSupabaseAuthorityConfigured() ? logActivityAction : undefined}
       />
     </PageContainer>
   );

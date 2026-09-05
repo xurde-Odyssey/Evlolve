@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { SystemState } from "@/components/ui/system-state";
 import { cn } from "@/lib/utils/cn";
-import { getDemoQuestStatus } from "@/lib/demo/quest-matching";
 import type { ActivityRecord } from "@/types/activity";
 import type { DailyQuest, QuestStatus } from "@/types/quest";
 
@@ -18,14 +17,12 @@ export function DailyQuests({
   emptyReason = "not_configured",
   quests,
 }: DailyQuestsProps) {
-  const questsWithStatus = quests.map((quest) => ({
-    ...quest,
-    displayStatus: getDemoQuestStatus(quest, activityRecords),
-  }));
-  const completedCount = questsWithStatus.filter(
-    (quest) => quest.displayStatus === "completed",
+  void activityRecords;
+
+  const completedCount = quests.filter((quest) =>
+    quest.status === "completed" || quest.status === "qualifying_partial",
   ).length;
-  const totalCount = questsWithStatus.length;
+  const totalCount = quests.length;
   const completionPercent =
     totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const allComplete = totalCount > 0 && completedCount === totalCount;
@@ -76,19 +73,20 @@ export function DailyQuests({
           </div>
 
           <ul className="divide-y divide-[var(--border)]">
-            {questsWithStatus.map((quest) => (
+            {quests.map((quest) => (
               <li
                 key={quest.id}
                 className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="flex min-w-0 gap-3">
-                  <QuestStatusIcon status={quest.displayStatus} />
+                  <QuestStatusIcon status={quest.status} />
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <p
                         className={cn(
                           "text-sm font-semibold text-[var(--foreground)]",
-                          quest.displayStatus === "completed" &&
+                          (quest.status === "completed" ||
+                            quest.status === "qualifying_partial") &&
                             "text-[var(--foreground-muted)]",
                         )}
                       >
@@ -108,7 +106,7 @@ export function DailyQuests({
                 </div>
 
                 <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
-                  <QuestAction status={quest.displayStatus} />
+                  <QuestAction status={quest.status} />
                 </div>
               </li>
             ))}
@@ -145,7 +143,7 @@ export function DailyQuests({
 function QuestStatusIcon({ status }: { status: QuestStatus }) {
   const className = "mt-0.5 size-4 shrink-0";
 
-  if (status === "completed") {
+  if (status === "completed" || status === "qualifying_partial") {
     return (
       <CheckCircle2
         aria-hidden="true"
@@ -178,10 +176,10 @@ function QuestStatusIcon({ status }: { status: QuestStatus }) {
 }
 
 function QuestAction({ status }: { status: QuestStatus }) {
-  if (status === "completed") {
+  if (status === "completed" || status === "qualifying_partial") {
     return (
       <span className="inline-flex min-h-10 min-w-28 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-elevated)] px-4 py-2 text-sm font-semibold text-[var(--foreground-muted)]">
-        Completed
+        {status === "qualifying_partial" ? "Partial" : "Completed"}
       </span>
     );
   }
@@ -190,6 +188,22 @@ function QuestAction({ status }: { status: QuestStatus }) {
     return (
       <span className="inline-flex min-h-10 min-w-28 items-center justify-center rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground-muted)]">
         Missed
+      </span>
+    );
+  }
+
+  if (status === "excluded") {
+    return (
+      <span className="inline-flex min-h-10 min-w-28 items-center justify-center rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground-muted)]">
+        Excluded
+      </span>
+    );
+  }
+
+  if (status === "attempted") {
+    return (
+      <span className="inline-flex min-h-10 min-w-28 items-center justify-center rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground-muted)]">
+        Attempted
       </span>
     );
   }

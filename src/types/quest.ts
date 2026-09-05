@@ -2,7 +2,14 @@ import type { ActivityKey, MeasurementType } from "@/types/activity";
 
 export type QuestSource = "system" | "user";
 
-export type QuestStatus = "pending" | "completed" | "missed";
+export type QuestStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "qualifying_partial"
+  | "attempted"
+  | "missed"
+  | "excluded";
 
 export type DailyQuest = {
   id: string;

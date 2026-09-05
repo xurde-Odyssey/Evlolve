@@ -8,9 +8,13 @@ import {
   Circle,
   Clock3,
   Flame,
+  ListChecks,
   Moon,
+  PlusCircle,
   ShieldAlert,
   ShieldCheck,
+  SlidersHorizontal,
+  Target,
   XCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -33,14 +37,22 @@ import type {
   TodayReadingState,
 } from "@/types/daily-execution";
 import type { WeeklyReminder } from "@/types/weekly-reminder";
+import type { ServerCommandResponse } from "@/application/evolve/server/commands";
+import type { EvolveServerActionResult } from "@/application/evolve/server/errors";
 
 type TodayExecutionProps = {
   execution: DailyExecutionSnapshot;
+  completeWeeklyReminderAction?: (
+    reminderId: string,
+  ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
 };
 
 const statusLabels: Record<DailyExecutionStatus, string> = {
   pending: "Pending",
+  in_progress: "In progress",
   completed: "Completed",
+  qualifying_partial: "Partial",
+  attempted: "Attempted",
   missed: "Missed",
   inactive: "Inactive",
   scheduled_rest: "Scheduled rest",
@@ -61,7 +73,10 @@ const notificationSeverityLabels: Record<EvolveNotificationSeverity, string> = {
 
 const itemPriority: Record<DailyExecutionStatus, number> = {
   pending: 0,
+  in_progress: 0,
   missed: 1,
+  attempted: 2,
+  qualifying_partial: 3,
   inactive: 2,
   scheduled_rest: 3,
   completed: 4,
@@ -69,13 +84,16 @@ const itemPriority: Record<DailyExecutionStatus, number> = {
 
 const statusIcons: Record<DailyExecutionStatus, LucideIcon> = {
   pending: Circle,
+  in_progress: Clock3,
   completed: CheckCircle2,
+  qualifying_partial: CheckCircle2,
+  attempted: Circle,
   missed: XCircle,
   inactive: Moon,
   scheduled_rest: Clock3,
 };
 
-export function TodayExecution({ execution }: TodayExecutionProps) {
+export function TodayExecution({ execution, completeWeeklyReminderAction }: TodayExecutionProps) {
   const [weeklyReminders, setWeeklyReminders] = useState(
     execution.weeklyReminders.reminders,
   );
@@ -98,7 +116,12 @@ export function TodayExecution({ execution }: TodayExecutionProps) {
     (reminder) => reminder.enabled,
   );
 
-  function completeWeeklyReminder(reminderId: string) {
+  async function completeWeeklyReminder(reminderId: string) {
+    if (completeWeeklyReminderAction) {
+      const result = await completeWeeklyReminderAction(reminderId);
+      if (!result.ok) return;
+    }
+
     setWeeklyReminders((currentReminders) =>
       currentReminders.map((reminder) =>
         reminder.id === reminderId
@@ -128,11 +151,10 @@ export function TodayExecution({ execution }: TodayExecutionProps) {
                 id="today-commitments"
                 className="text-sm font-semibold uppercase text-[var(--foreground-muted)]"
               >
-                Required Commitments
+                Today&apos;s commitments
               </h2>
-              <p className="mt-1 text-sm text-[var(--foreground-muted)]">
-                {completedItems.length} / {requiredItems.length} completed before
-                deadline.
+              <p className="numeric mt-1 font-mono text-2xl font-semibold text-[var(--foreground)]">
+                {completedItems.length}/{requiredItems.length}
               </p>
             </div>
             <div className="min-w-44">
@@ -167,15 +189,27 @@ export function TodayExecution({ execution }: TodayExecutionProps) {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Link
-              className="inline-flex min-h-10 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-elevated)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)]"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-elevated)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)]"
               href="/activities"
             >
+              <PlusCircle
+                aria-hidden="true"
+                className="size-4"
+                focusable="false"
+                strokeWidth={1.9}
+              />
               Log Activity
             </Link>
             <Link
-              className="inline-flex min-h-10 items-center justify-center rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground-muted)] transition hover:border-[var(--primary)] hover:text-[var(--foreground)]"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground-muted)] transition hover:border-[var(--primary)] hover:text-[var(--foreground)]"
               href="/settings"
             >
+              <SlidersHorizontal
+                aria-hidden="true"
+                className="size-4"
+                focusable="false"
+                strokeWidth={1.9}
+              />
               Configure Commitments
             </Link>
           </div>
@@ -210,7 +244,7 @@ function WeeklyReminderSection({
   onCompleteReminder,
 }: {
   reminders: WeeklyReminder[];
-  onCompleteReminder: (reminderId: string) => void;
+  onCompleteReminder: (reminderId: string) => void | Promise<void>;
 }) {
   return (
     <section
@@ -231,9 +265,6 @@ function WeeklyReminderSection({
           >
             Optional this week
           </h2>
-          <p className="mt-1 text-sm text-[var(--foreground-muted)]">
-            Weekly Reminders. No XP or progression impact.
-          </p>
         </div>
       </div>
 
@@ -266,10 +297,6 @@ function WeeklyReminderSection({
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[var(--foreground)]">
                     {reminder.title}
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--foreground-muted)]">
-                    Optional · Anytime this week ·{" "}
-                    {reminder.completed ? "Completed" : "Pending"}
                   </p>
                 </div>
               </div>
@@ -372,6 +399,7 @@ function TodayHeader({
 function ExecutionItemRow({ item }: { item: DailyExecutionItem }) {
   const Icon = statusIcons[item.status];
   const isUnresolved = item.status === "pending" || item.status === "missed";
+  const detail = formatItemDetails(item);
 
   return (
     <li
@@ -381,19 +409,21 @@ function ExecutionItemRow({ item }: { item: DailyExecutionItem }) {
       )}
     >
       <div className="flex min-w-0 gap-3">
-        <Icon
-          aria-hidden="true"
-          className={cn(
-            "mt-0.5 size-4 shrink-0",
-            item.status === "completed" && "text-[var(--accent-pro)]",
-            item.status === "pending" && "text-[var(--foreground)]",
-            item.status === "missed" && "text-[var(--boss)]",
-            (item.status === "inactive" || item.status === "scheduled_rest") &&
-              "text-[var(--foreground-muted)]",
-          )}
-          focusable="false"
-          strokeWidth={1.9}
-        />
+        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-[var(--surface-elevated)]">
+          <Icon
+            aria-hidden="true"
+            className={cn(
+              "size-4",
+              item.status === "completed" && "text-[var(--accent-pro)]",
+              item.status === "pending" && "text-[var(--foreground)]",
+              item.status === "missed" && "text-[var(--boss)]",
+              (item.status === "inactive" || item.status === "scheduled_rest") &&
+                "text-[var(--foreground-muted)]",
+            )}
+            focusable="false"
+            strokeWidth={1.9}
+          />
+        </span>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-semibold text-[var(--foreground)]">
@@ -414,21 +444,35 @@ function ExecutionItemRow({ item }: { item: DailyExecutionItem }) {
               </span>
             ) : null}
           </div>
-          <p className="mt-1 text-sm leading-6 text-[var(--foreground-muted)]">
-            {formatItemDetails(item)}
-          </p>
+          {detail ? (
+            <p className="mt-1 text-sm leading-6 text-[var(--foreground-muted)]">
+              {detail}
+            </p>
+          ) : null}
         </div>
       </div>
 
-      <div className="grid gap-2 sm:min-w-36 sm:text-right">
+      <div className="flex flex-wrap gap-2 sm:min-w-36 sm:justify-end">
         {item.targetLabel ? (
-          <p className="text-sm font-semibold text-[var(--foreground)]">
+          <p className="inline-flex items-center gap-1.5 rounded-md bg-[var(--surface-elevated)] px-2 py-1 text-sm font-semibold text-[var(--foreground)]">
+            <Target
+              aria-hidden="true"
+              className="size-3.5"
+              focusable="false"
+              strokeWidth={1.9}
+            />
             {item.targetLabel}
           </p>
         ) : null}
         {item.actualLabel ? (
-          <p className="text-sm text-[var(--foreground-muted)]">
-            {item.actualLabel}
+          <p className="inline-flex items-center gap-1.5 rounded-md bg-[var(--background)] px-2 py-1 text-sm font-semibold text-[var(--foreground-muted)]">
+            <ListChecks
+              aria-hidden="true"
+              className="size-3.5"
+              focusable="false"
+              strokeWidth={1.9}
+            />
+            {cleanActualLabel(item.actualLabel)}
           </p>
         ) : null}
       </div>
@@ -474,16 +518,12 @@ function DeadlineCard({
           </p>
         </div>
       </div>
-      <p className="text-sm leading-6 text-[var(--foreground-muted)]">
+      <p className="text-sm font-semibold text-[var(--foreground)]">
         {requiredCount === 0
           ? "No required commitments today."
           : remainingCount > 0
             ? `${remainingCount} commitment${remainingCount === 1 ? "" : "s"} remaining.`
-            : "No unresolved required commitments."}
-      </p>
-      <p className="text-sm font-semibold text-[var(--foreground)]">
-        After {execution.deadlineLabel}, unresolved requirements become missed in
-        daily execution state.
+            : "All required commitments complete."}
       </p>
     </section>
   );
@@ -572,9 +612,6 @@ function BossAlerts({ alerts }: { alerts: TodayBossAlert[] }) {
           <h2 className="text-sm font-semibold uppercase text-[var(--foreground-muted)]">
             Boss Alerts
           </h2>
-          <p className="mt-1 text-sm text-[var(--foreground-muted)]">
-            Separate from ordinary daily commitments.
-          </p>
         </div>
       </div>
 
@@ -656,9 +693,6 @@ function NotificationPanel({
           <h2 className="text-sm font-semibold uppercase text-[var(--foreground-muted)]">
             Notifications
           </h2>
-          <p className="mt-1 text-sm text-[var(--foreground-muted)]">
-            Recent system events, not a full inbox.
-          </p>
         </div>
       </div>
 
@@ -726,9 +760,6 @@ function InactiveAlerts({ alerts }: { alerts: TodayInactiveAlert[] }) {
           <h2 className="text-sm font-semibold uppercase text-[var(--foreground-muted)]">
             Inactive Mode Alerts
           </h2>
-          <p className="mt-1 text-sm text-[var(--foreground-muted)]">
-            Pause state is not a missed commitment.
-          </p>
         </div>
       </div>
 
@@ -849,24 +880,26 @@ function getHeadline(
 
 function formatItemDetails(item: DailyExecutionItem) {
   if (item.status === "scheduled_rest") {
-    return "Scheduled rest does not trigger warning escalation.";
+    return "Rest day";
   }
 
   if (item.status === "inactive") {
-    return item.actualLabel ?? "Inactive mode preserves history.";
+    return item.actualLabel ?? "Paused";
   }
 
   if (item.status === "missed") {
-    return item.actualLabel
-      ? `Completed before deadline: ${item.actualLabel}`
-      : "Requirement missed after deadline.";
+    return "Missed";
   }
 
   if (item.streakAtRisk && item.streakLabel) {
-    return `${item.streakLabel} is at risk.`;
+    return item.streakLabel;
   }
 
-  return item.actualLabel ?? item.targetLabel ?? statusLabels[item.status];
+  return null;
+}
+
+function cleanActualLabel(label: string) {
+  return label.replace(/\s+before deadline$/i, "");
 }
 
 function getBossLabel(status: TodayBossAlert["status"]) {

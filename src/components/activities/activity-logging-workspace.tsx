@@ -2,13 +2,23 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { activityDefinitions } from "@/config/activity-definitions";
+import { activityIcons } from "@/config/icon-maps";
 import { ActivityHistory } from "@/components/activities/activity-history";
 import { DailyQuests } from "@/components/quests/daily-quests";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SystemState } from "@/components/ui/system-state";
 import Link from "next/link";
-import { getDemoQuestStatus } from "@/lib/demo/quest-matching";
+import {
+  createEvolveApplication,
+  getDailyQuestViewModel,
+  type EvolveLocalState,
+} from "@/application/evolve";
+import type {
+  ServerActivityLogInput,
+  ServerActivityLogResponse,
+} from "@/application/evolve/server/commands";
+import type { EvolveServerActionResult } from "@/application/evolve/server/errors";
 import type {
   ActivityDefinition,
   ActivityKey,
@@ -16,13 +26,15 @@ import type {
   MeasurementOption,
   MeasurementType,
 } from "@/types/activity";
-import type { DailyQuest } from "@/types/quest";
+import type { GrowthCommitment } from "@/application/evolve";
 
 const fallbackActivityDefinition = activityDefinitions[0] as ActivityDefinition;
 
 type ActivityLoggingWorkspaceProps = {
-  initialActivityRecords: ActivityRecord[];
-  quests: DailyQuest[];
+  initialState: EvolveLocalState;
+  logActivityAction?: (
+    input: ServerActivityLogInput,
+  ) => Promise<EvolveServerActionResult<ServerActivityLogResponse>>;
 };
 
 type SuccessState = {
@@ -32,47 +44,40 @@ type SuccessState = {
 };
 
 export function ActivityLoggingWorkspace({
-  initialActivityRecords,
-  quests,
+  initialState,
+  logActivityAction,
 }: ActivityLoggingWorkspaceProps) {
-  if (activityDefinitions.length === 0) {
-    return (
-      <SystemState
-        title="No active activities."
-        description="Activate an Improvement Area before logging work."
-        action={
-          <Link
-            className="inline-flex min-h-10 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-elevated)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)]"
-            href="/settings"
-          >
-            Activate Improvement Area
-          </Link>
-        }
-      />
-    );
-  }
-
   return (
     <ActivityLoggingSession
-      initialActivityRecords={initialActivityRecords}
-      quests={quests}
+      initialState={initialState}
+      logActivityAction={logActivityAction}
     />
   );
 }
 
 function ActivityLoggingSession({
-  initialActivityRecords,
-  quests,
+  initialState,
+  logActivityAction,
 }: ActivityLoggingWorkspaceProps) {
-  const [activityRecords, setActivityRecords] = useState<ActivityRecord[]>(
-    initialActivityRecords,
+  const [appState, setAppState] = useState<EvolveLocalState>(initialState);
+  const activityRecords = appState.activityRecords;
+  const quests = getDailyQuestViewModel(appState);
+  const activeCommitments = appState.commitments.filter(
+    (commitment) => commitment.status === "active",
   );
-  const [activityKey, setActivityKey] = useState<ActivityKey>(
-    fallbackActivityDefinition.key,
+  const [selectedCommitmentId, setSelectedCommitmentId] = useState(
+    activeCommitments[0]?.id ?? "",
   );
-  const selectedActivity = getActivityDefinition(activityKey);
+  const selectedCommitment = activeCommitments.find(
+    (commitment) => commitment.id === selectedCommitmentId,
+  ) ?? activeCommitments[0];
+  const selectedActivity = selectedCommitment
+    ? getActivityDefinition(selectedCommitment.activityKey)
+    : fallbackActivityDefinition;
   const [measurementType, setMeasurementType] = useState<MeasurementType>(
-    selectedActivity.measurementOptions[0]?.type ?? "completion",
+    selectedCommitment?.measurementType ??
+      selectedActivity.measurementOptions[0]?.type ??
+      "completion",
   );
   const selectedMeasurement = getMeasurementOption(
     selectedActivity,
@@ -96,15 +101,19 @@ function ActivityLoggingSession({
     [activityRecords],
   );
 
-  function handleActivityChange(nextKey: ActivityKey) {
-    const nextActivity = getActivityDefinition(nextKey);
-    setActivityKey(nextKey);
-    setMeasurementType(nextActivity.measurementOptions[0]?.type ?? "completion");
+  function handleCommitmentChange(commitment: GrowthCommitment) {
+    const nextActivity = getActivityDefinition(commitment.activityKey);
+    setSelectedCommitmentId(commitment.id);
+    setMeasurementType(
+      commitment.measurementType ??
+        nextActivity.measurementOptions[0]?.type ??
+        "completion",
+    );
     setMeasurementValue("");
     setError(null);
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (isSubmitting) {
@@ -142,33 +151,51 @@ function ActivityLoggingSession({
     }
 
     const occurredAt = new Date().toISOString();
-    const record: ActivityRecord = {
-      id: `activity-${activityRecords.length + 1}-${selectedActivity.key}`,
+    const commandInput = {
       activityKey: selectedActivity.key,
-      activityLabel: selectedActivity.label,
-      measurement: {
-        type: selectedMeasurement.type,
-        value: parsedValue,
-        unit: selectedMeasurement.unit,
-      },
-      notes: notes.trim() || undefined,
+      measurementType: selectedMeasurement.type,
+      value: parsedValue,
+      unit: selectedMeasurement.unit,
+      notes,
       occurredAt,
-      status: "completed",
-    };
-    const nextRecords = [record, ...activityRecords];
-    const matchedQuestCount = countNewDemoQuestMatches(
-      quests,
-      activityRecords,
-      nextRecords,
-    );
+      idempotencyKey: submissionSignature,
+    } satisfies ServerActivityLogInput;
 
-    setActivityRecords(nextRecords);
+    if (logActivityAction) {
+      const result = await logActivityAction(commandInput);
+
+      if (!result.ok) {
+        setError(result.message);
+        setIsSubmitting(false);
+        return;
+      }
+
+      setMeasurementValue("");
+      setNotes("");
+      setSuccess({
+        activityLabel: selectedActivity.label,
+        measurementText: formatMeasurementText({
+          type: selectedMeasurement.type,
+          value: parsedValue,
+          unit: selectedMeasurement.unit,
+        }),
+        matchedQuestCount: result.data.matchedRequirementCount,
+      });
+      setLastSubmissionSignature(submissionSignature);
+      setIsSubmitting(false);
+      return;
+    }
+
+    const app = createEvolveApplication(appState);
+    const result = app.logActivity(commandInput);
+
+    setAppState(result.state);
     setMeasurementValue("");
     setNotes("");
     setSuccess({
-      activityLabel: record.activityLabel,
-      measurementText: formatMeasurement(record),
-      matchedQuestCount,
+      activityLabel: result.record.activityLabel,
+      measurementText: formatMeasurement(result.record),
+      matchedQuestCount: result.matchedRequirementCount,
     });
     setLastSubmissionSignature(submissionSignature);
     setIsSubmitting(false);
@@ -176,41 +203,82 @@ function ActivityLoggingSession({
 
   return (
     <div className="space-y-6">
+      {activeCommitments.length === 0 ? (
+        <SystemState
+          title="No active commitments yet."
+          description="Choose an Improvement Area before recording completed work."
+          action={
+            <Link
+              className="inline-flex min-h-10 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-elevated)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)]"
+              href="/settings"
+            >
+              Choose an Improvement Area
+            </Link>
+          }
+        />
+      ) : null}
+
+      {selectedCommitment ? (
       <Card className="space-y-5">
         <div>
-          <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">
-            Log activity
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--foreground-muted)]">
+            Quick log
           </p>
+          <h1 className="mt-2 text-2xl font-semibold text-[var(--foreground)] sm:text-3xl">
+            What did you complete?
+          </h1>
           <p className="mt-2 text-sm leading-6 text-[var(--foreground-muted)]">
-            Record completed real-world activity while it is still recent.
-            Long-term 24-hour validation will be enforced later.
+            Choose one of your active commitments, then record what actually happened.
           </p>
         </div>
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-sm font-semibold text-[var(--foreground)]">
-                What did you do?
-              </span>
-              <select
-                className="min-h-11 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)]"
-                value={activityKey}
-                onChange={(event) =>
-                  handleActivityChange(event.target.value as ActivityKey)
-                }
-              >
-                {activityDefinitions.map((activityDefinition) => (
-                  <option
-                    key={activityDefinition.key}
-                    value={activityDefinition.key}
-                  >
-                    {activityDefinition.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {activeCommitments.map((commitment) => {
+            const Icon = activityIcons[commitment.activityKey] ?? activityIcons.custom;
+            const selected = commitment.id === selectedCommitment.id;
 
+            return (
+              <button
+                key={commitment.id}
+                type="button"
+                aria-pressed={selected}
+                className={`group flex min-h-20 items-center gap-3 rounded-lg border p-3 text-left transition ${
+                  selected
+                    ? "border-[var(--primary)] bg-[var(--background)] shadow-[var(--shadow-soft)]"
+                    : "border-[var(--border)] bg-[var(--surface-elevated)] hover:border-[var(--primary)]"
+                }`}
+                onClick={() => handleCommitmentChange(commitment)}
+              >
+                <span className="grid size-10 shrink-0 place-items-center rounded-md bg-[var(--accent-subtle)] text-[var(--primary)]">
+                  <Icon aria-hidden="true" className="size-5" strokeWidth={1.8} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold text-[var(--foreground)]">
+                    {commitment.title}
+                  </span>
+                  <span className="mt-1 block truncate text-xs text-[var(--foreground-muted)]">
+                    Target: {commitment.targetValue} {commitment.unit}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--background)] p-4 sm:p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--foreground-muted)]">
+              {selectedCommitment.title}
+            </p>
+            <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">
+              {activityQuestion(selectedCommitment, selectedMeasurement)}
+            </p>
+            <p className="mt-1 text-sm text-[var(--foreground-muted)]">
+              Commitment target: {selectedCommitment.targetValue} {selectedCommitment.unit}
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
             {selectedActivity.measurementOptions.length > 1 ? (
               <label className="space-y-2">
                 <span className="text-sm font-semibold text-[var(--foreground)]">
@@ -304,11 +372,12 @@ function ActivityLoggingSession({
             </div>
           ) : null}
 
-          <Button type="submit" disabled={isSubmitting}>
+          <Button className="min-w-36" type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Recording..." : "Record Activity"}
           </Button>
         </form>
       </Card>
+      ) : null}
 
       <DailyQuests activityRecords={activityRecords} quests={quests} />
       <ActivityHistory records={sortedRecords} />
@@ -316,11 +385,46 @@ function ActivityLoggingSession({
   );
 }
 
+function formatMeasurementText(measurement: {
+  type: MeasurementType;
+  value?: number;
+  unit?: string;
+}) {
+  if (measurement.type === "completion") return "Completed";
+
+  return `${measurement.value ?? 0} ${measurement.unit ?? ""}`.trim();
+}
+
 function getActivityDefinition(activityKey: ActivityKey): ActivityDefinition {
   return (
     activityDefinitions.find((definition) => definition.key === activityKey) ??
     fallbackActivityDefinition
   );
+}
+
+function activityQuestion(
+  commitment: GrowthCommitment,
+  measurement: MeasurementOption,
+) {
+  if (measurement.type === "completion") {
+    return `Did you complete ${commitment.title}?`;
+  }
+
+  const verbs: Partial<Record<ActivityKey, string>> = {
+    running: "run",
+    reading: "read",
+    workout: "train",
+    coding: "focus",
+    meditation: "practice",
+    sleep: "sleep",
+    water: "drink",
+  };
+  const verb = verbs[commitment.activityKey] ?? "complete";
+  if (measurement.type === "volume") {
+    return `How much did you ${verb}? Enter your ${measurement.label.toLowerCase()} in ${measurement.unit}.`;
+  }
+
+  return `How many ${measurement.unit} did you ${verb}?`;
 }
 
 function getMeasurementOption(
@@ -343,21 +447,4 @@ function formatMeasurement(record: ActivityRecord) {
   }
 
   return `${record.measurement.value} ${record.measurement.unit}`;
-}
-
-function countNewDemoQuestMatches(
-  quests: DailyQuest[],
-  previousRecords: ActivityRecord[],
-  nextRecords: ActivityRecord[],
-) {
-  return quests.filter((quest) => {
-    if (quest.status !== "pending" || !quest.target) {
-      return false;
-    }
-
-    const wasMatched = getDemoQuestStatus(quest, previousRecords) === "completed";
-    const isMatched = getDemoQuestStatus(quest, nextRecords) === "completed";
-
-    return !wasMatched && isMatched;
-  }).length;
 }

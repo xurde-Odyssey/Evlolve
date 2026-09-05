@@ -3,9 +3,11 @@ import type { ActivityKey, MeasurementType } from "@/types/activity";
 export type BossChallengeStatus =
   | "offered"
   | "accepted"
+  | "in_progress"
   | "completed"
   | "failed"
-  | "rejected";
+  | "rejected"
+  | "expired";
 
 export type BossEvaluationType =
   | "single_value"

@@ -32,7 +32,7 @@ export const activityDefinitions = [
   },
   {
     key: "reading",
-    label: "Reading",
+    label: "Bookaholic",
     source: "system",
     measurementOptions: [
       {
@@ -61,7 +61,7 @@ export const activityDefinitions = [
   },
   {
     key: "meditation",
-    label: "Meditation",
+    label: "Mental Training",
     source: "system",
     measurementOptions: [
       {
@@ -73,7 +73,7 @@ export const activityDefinitions = [
   },
   {
     key: "sleep",
-    label: "Sleep",
+    label: "Endurance",
     source: "system",
     measurementOptions: [
       {
@@ -85,7 +85,7 @@ export const activityDefinitions = [
   },
   {
     key: "water",
-    label: "Water",
+    label: "Deep Work",
     source: "system",
     measurementOptions: [
       {

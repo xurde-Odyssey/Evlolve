@@ -1,14 +1,22 @@
 import { PageContainer } from "@/components/layout/page-container";
-import { PageHeader } from "@/components/layout/page-header";
+import { AuthWorkspace } from "@/components/auth/auth-workspace";
 
-export default function AuthPlaceholderPage() {
+type AuthPageProps = {
+  searchParams: Promise<{
+    next?: string;
+    error?: string;
+  }>;
+};
+
+export const dynamic = "force-dynamic";
+
+export default async function AuthPage({ searchParams }: AuthPageProps) {
+  const params = await searchParams;
+  const nextPath = params.next?.startsWith("/") ? params.next : "/dashboard";
+
   return (
     <PageContainer>
-      <PageHeader
-        eyebrow="/auth"
-        title="Authentication"
-        description="Placeholder route reserved for a later authentication phase."
-      />
+      <AuthWorkspace nextPath={nextPath} errorMessage={params.error} />
     </PageContainer>
   );
 }

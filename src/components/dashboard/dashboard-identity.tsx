@@ -1,14 +1,15 @@
 import { Flame } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 
 export type CharacterIdentityData = {
   name: string;
   level: number;
+  highestLevel: number;
   currentXp: number;
-  nextLevelXp: number;
+  levelStateLabel?: string;
   title?: string;
   streakDays?: number;
+  bestStreakDays?: number;
   avatarUrl?: string;
 };
 
@@ -29,13 +30,6 @@ const numberFormatter = new Intl.NumberFormat("en-US");
 
 export function DashboardIdentity({ character }: DashboardIdentityProps) {
   const boundedCurrentXp = Math.max(character.currentXp, 0);
-  const boundedNextLevelXp = Math.max(character.nextLevelXp, 1);
-  const xpPercent = Math.round(
-    Math.min((boundedCurrentXp / boundedNextLevelXp) * 100, 100),
-  );
-  const xpText = `${numberFormatter.format(
-    boundedCurrentXp,
-  )} of ${numberFormatter.format(boundedNextLevelXp)} XP`;
   const initials = getInitials(character.name) || "EV";
 
   return (
@@ -76,15 +70,27 @@ export function DashboardIdentity({ character }: DashboardIdentityProps) {
                 </p>
               </div>
               <p className="numeric font-mono text-sm font-semibold text-[var(--foreground)] sm:text-base">
-                {numberFormatter.format(boundedCurrentXp)} /{" "}
-                {numberFormatter.format(boundedNextLevelXp)} XP
+                Highest Level {character.highestLevel}
               </p>
             </div>
-            <Progress
-              value={xpPercent}
-              ariaLabel="Overall XP progress"
-              ariaValueText={xpText}
-            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2">
+                <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">
+                  Lifetime XP
+                </p>
+                <p className="numeric mt-1 font-mono text-lg font-semibold text-[var(--foreground)]">
+                  {numberFormatter.format(boundedCurrentXp)}
+                </p>
+              </div>
+              <div className="rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2">
+                <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">
+                  Current direction
+                </p>
+                <p className="mt-1 text-lg font-semibold text-[var(--foreground)]">
+                  {character.levelStateLabel ?? "Stable"}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -105,13 +111,25 @@ export function DashboardIdentity({ character }: DashboardIdentityProps) {
               <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">
                 Context
               </p>
-              <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]">
-                <Flame
-                  aria-hidden="true"
-                  className="size-4 text-[var(--accent-pro)]"
-                  strokeWidth={1.9}
-                />
-                <span>{character.streakDays} day streak</span>
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]">
+                  <Flame
+                    aria-hidden="true"
+                    className="size-4 text-[var(--accent-pro)]"
+                    strokeWidth={1.9}
+                  />
+                  <span>{character.streakDays} day streak</span>
+                </div>
+                {typeof character.bestStreakDays === "number" ? (
+                  <div className="flex items-baseline justify-between gap-3 rounded-md bg-[var(--surface-elevated)] px-3 py-2">
+                    <span className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">
+                      Best
+                    </span>
+                    <span className="numeric font-mono text-sm font-semibold text-[var(--foreground)]">
+                      {character.bestStreakDays} days
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </div>
           ) : null}

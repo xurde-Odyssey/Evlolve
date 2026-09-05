@@ -5,6 +5,8 @@ type AppLayoutProps = {
   children: ReactNode;
 };
 
+export const dynamic = "force-dynamic";
+
 export default function AppLayout({ children }: AppLayoutProps) {
   return <AppShell>{children}</AppShell>;
 }

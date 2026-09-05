@@ -24,7 +24,7 @@ export type ReportPeriod = {
 export type ReadingActivityRecord = {
   id: string;
   activityKey: "reading";
-  activityLabel: "Reading";
+  activityLabel: "Bookaholic";
   bookId: string;
   pagesRead: number;
   occurredAt: string;

@@ -1,9 +1,13 @@
 import { BossChallengeWorkspace } from "@/components/boss/boss-challenge-workspace";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { demoBossChallenges } from "@/lib/demo/evolve-demo-data";
+import { getBossViewModel } from "@/application/evolve";
+import { getCurrentEvolveState } from "@/application/evolve/server/queries";
+import { acceptBossAction, rejectBossAction } from "./actions";
 
-export default function GoalsPage() {
+export default async function GoalsPage() {
+  const state = await getCurrentEvolveState();
+
   return (
     <PageContainer>
       <PageHeader
@@ -11,7 +15,12 @@ export default function GoalsPage() {
         title="Boss Challenges"
         description="Adaptive challenges based on demonstrated capability."
       />
-      <BossChallengeWorkspace initialChallenges={demoBossChallenges} />
+      <BossChallengeWorkspace
+        initialChallenges={getBossViewModel(state)}
+        initialState={state}
+        acceptBossAction={acceptBossAction}
+        rejectBossAction={rejectBossAction}
+      />
     </PageContainer>
   );
 }

@@ -20,7 +20,7 @@ export const predefinedImprovementAreas = [
   },
   {
     id: "reading",
-    title: "Reading",
+    title: "Bookaholic",
     description: "Build consistent reading volume.",
     activityKey: "reading",
     progressBehavior: "cumulative",
@@ -40,21 +40,21 @@ export const predefinedImprovementAreas = [
   },
   {
     id: "meditation",
-    title: "Meditation",
+    title: "Mental Training",
     description: "Develop a regular meditation practice.",
     activityKey: "meditation",
     progressBehavior: "cumulative",
   },
   {
     id: "sleep",
-    title: "Sleep",
+    title: "Endurance",
     description: "Improve recovery and consistency.",
     activityKey: "sleep",
     progressBehavior: "state",
   },
   {
     id: "hydration",
-    title: "Hydration",
+    title: "Deep Work",
     description: "Maintain daily hydration.",
     activityKey: "water",
     progressBehavior: "state",
@@ -76,8 +76,8 @@ export const evolvePrograms = [
     areas: [
       { title: "Running", activityKey: "running" },
       { title: "Strength Training", activityKey: "workout" },
-      { title: "Sleep", activityKey: "sleep" },
-      { title: "Hydration", activityKey: "water" },
+      { title: "Endurance", activityKey: "sleep" },
+      { title: "Deep Work", activityKey: "water" },
     ],
   },
   {
@@ -88,7 +88,7 @@ export const evolvePrograms = [
     areas: [
       { title: "Technical Practice", activityKey: "coding" },
       { title: "Focused Study" },
-      { title: "Reading", activityKey: "reading" },
+      { title: "Bookaholic", activityKey: "reading" },
       { title: "Project Work" },
     ],
   },

@@ -36,9 +36,23 @@ import type {
   Weekday,
 } from "@/types/settings";
 import type { WeeklyReminder } from "@/types/weekly-reminder";
+import type {
+  BookaholicActivationInput,
+  ServerCommandResponse,
+} from "@/application/evolve/server/commands";
+import type { EvolveServerActionResult } from "@/application/evolve/server/errors";
 
 type SettingsWorkspaceProps = {
   snapshot: SettingsSnapshot;
+  activateActivityAction?: (
+    configuration: ActivityConfiguration,
+  ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  activateBookaholicAction?: (
+    input: BookaholicActivationInput,
+  ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  deactivateActivityAction?: (
+    activityKey: ActivityKey,
+  ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
 };
 
 const weekdayLabels: Record<Weekday, string> = {
@@ -102,7 +116,12 @@ const defaultUnits: Record<MeasurementType, string> = {
 const recoveryOptions: ReadingRecoveryDays[] = [2, 3];
 const weekFrequencyOptions = [1, 2, 3, 4, 5, 6, 7];
 
-export function SettingsWorkspace({ snapshot }: SettingsWorkspaceProps) {
+export function SettingsWorkspace({
+  snapshot,
+  activateActivityAction,
+  activateBookaholicAction,
+  deactivateActivityAction,
+}: SettingsWorkspaceProps) {
   const [activities, setActivities] = useState(snapshot.activityConfigurations);
   const [notifications, setNotifications] = useState(
     snapshot.notificationPreferences,
@@ -121,6 +140,7 @@ export function SettingsWorkspace({ snapshot }: SettingsWorkspaceProps) {
   );
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [bookaholicActivationOpen, setBookaholicActivationOpen] = useState(false);
 
   const activeCommitments = activities.filter((activity) => activity.active).length;
   const availableSlots = Math.max(snapshot.commitmentCapacity - activeCommitments, 0);
@@ -145,7 +165,7 @@ export function SettingsWorkspace({ snapshot }: SettingsWorkspaceProps) {
     );
   }
 
-  function toggleActivity(activityKey: ActivityKey, nextActive: boolean) {
+  async function toggleActivity(activityKey: ActivityKey, nextActive: boolean) {
     setErrorMessage(null);
     setStatusMessage(null);
 
@@ -154,10 +174,60 @@ export function SettingsWorkspace({ snapshot }: SettingsWorkspaceProps) {
       return;
     }
 
+    const activity = activities.find((item) => item.activityKey === activityKey);
+    if (nextActive && activityKey === "reading" && activateBookaholicAction && activity) {
+      setBookaholicActivationOpen(true);
+      return;
+    }
+    if (nextActive && activateActivityAction && activity) {
+      const result = await activateActivityAction(activity);
+      if (!result.ok) {
+        setErrorMessage(result.message);
+        return;
+      }
+    }
+
+    if (!nextActive && deactivateActivityAction) {
+      const result = await deactivateActivityAction(activityKey);
+      if (!result.ok) {
+        setErrorMessage(result.message);
+        return;
+      }
+    }
+
     updateActivity(activityKey, (activity) => ({
       ...activity,
       active: nextActive,
     }));
+  }
+
+  async function activateBookaholic() {
+    const readingPages = Number(bookPages);
+    const validationError = validateReading(bookTitle, readingPages, recoveryDays);
+    if (validationError) {
+      setStatusMessage(null);
+      setErrorMessage(validationError);
+      return;
+    }
+
+    const activity = activities.find((item) => item.activityKey === "reading");
+    if (!activity || !activateBookaholicAction) return;
+
+    const result = await activateBookaholicAction({
+      configuration: activity,
+      bookTitle,
+      totalPages: readingPages,
+      recoveryDays,
+    });
+    if (!result.ok) {
+      setErrorMessage(result.message);
+      return;
+    }
+
+    updateActivity("reading", (currentActivity) => ({ ...currentActivity, active: true }));
+    setBookaholicActivationOpen(false);
+    setErrorMessage(null);
+    setStatusMessage("Bookaholic is active. Your first target starts at 5 pages.");
   }
 
   function handleMeasurementChange(
@@ -261,16 +331,21 @@ export function SettingsWorkspace({ snapshot }: SettingsWorkspaceProps) {
           onChange={setCustomActivity}
           onSubmit={handleCustomSubmit}
         />
-        <ReadingSettingsPanel
+      </div>
+
+      {bookaholicActivationOpen ? (
+        <BookaholicActivationDialog
           bookTitle={bookTitle}
           bookPages={bookPages}
-          oneActiveBookEncouraged={snapshot.reading.oneActiveBookEncouraged}
           recoveryDays={recoveryDays}
+          oneActiveBookEncouraged={snapshot.reading.oneActiveBookEncouraged}
           onBookPagesChange={setBookPages}
           onBookTitleChange={setBookTitle}
           onRecoveryDaysChange={setRecoveryDays}
+          onCancel={() => setBookaholicActivationOpen(false)}
+          onConfirm={activateBookaholic}
         />
-      </div>
+      ) : null}
 
       <WeeklyRemindersPanel
         maxActive={snapshot.weeklyReminders.maxActive}
@@ -551,12 +626,12 @@ function SettingsOverview({
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <OverviewMetric label="Slots open" value={String(availableSlots)} />
-        <OverviewMetric label="Warning starts" value="5:00 PM" />
+        <OverviewMetric label="Warning starts" value={snapshot.warningThresholdLabel} />
         <OverviewMetric
           label="Daily deadline"
           value={snapshot.progressionDeadlineLabel}
         />
-        <OverviewMetric label="Calendar boundary" value="12:00 AM" />
+        <OverviewMetric label="Calendar boundary" value={snapshot.calendarBoundaryLabel} />
         <OverviewMetric label="Freeze use" value="Automatic" />
         <OverviewMetric label="Inactive limit" value="7 days" />
       </div>
@@ -577,7 +652,7 @@ function ActivityConfigurationPanel({
   activeCommitments: number;
   capacity: number;
   measurementOptionMap: Map<ActivityKey, { type: MeasurementType; label: string; unit: string }[]>;
-  onToggleActivity: (activityKey: ActivityKey, nextActive: boolean) => void;
+  onToggleActivity: (activityKey: ActivityKey, nextActive: boolean) => void | Promise<void>;
   onMeasurementChange: (
     activity: ActivityConfiguration,
     measurementType: MeasurementType,
@@ -1170,6 +1245,59 @@ function ReadingSettingsPanel({
         </p>
       ) : null}
     </Card>
+  );
+}
+
+function BookaholicActivationDialog({
+  bookTitle,
+  bookPages,
+  recoveryDays,
+  oneActiveBookEncouraged,
+  onBookTitleChange,
+  onBookPagesChange,
+  onRecoveryDaysChange,
+  onCancel,
+  onConfirm,
+}: {
+  bookTitle: string;
+  bookPages: string;
+  recoveryDays: ReadingRecoveryDays;
+  oneActiveBookEncouraged: boolean;
+  onBookTitleChange: (value: string) => void;
+  onBookPagesChange: (value: string) => void;
+  onRecoveryDaysChange: (value: ReadingRecoveryDays) => void;
+  onCancel: () => void;
+  onConfirm: () => void | Promise<void>;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 p-4" role="dialog" aria-modal="true" aria-labelledby="bookaholic-activation-title">
+      <Card className="w-full max-w-xl space-y-5 bg-[var(--surface)] shadow-xl">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--foreground-muted)]">
+            Start a Growth Commitment
+          </p>
+          <h2 id="bookaholic-activation-title" className="mt-2 text-2xl font-semibold text-[var(--foreground)]">
+            Set up Bookaholic
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--foreground-muted)]">
+            Tell Evolve what you are reading. Your first daily target begins at 5 pages and adapts gradually as your reading pace becomes clear.
+          </p>
+        </div>
+        <ReadingSettingsPanel
+          bookTitle={bookTitle}
+          bookPages={bookPages}
+          oneActiveBookEncouraged={oneActiveBookEncouraged}
+          recoveryDays={recoveryDays}
+          onBookPagesChange={onBookPagesChange}
+          onBookTitleChange={onBookTitleChange}
+          onRecoveryDaysChange={onRecoveryDaysChange}
+        />
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+          <Button variant="primary" onClick={onConfirm}>Activate Bookaholic</Button>
+        </div>
+      </Card>
+    </div>
   );
 }
 

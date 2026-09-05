@@ -4,7 +4,10 @@ import type { WeeklyReminderSnapshot } from "@/types/weekly-reminder";
 
 export type DailyExecutionStatus =
   | "pending"
+  | "in_progress"
   | "completed"
+  | "qualifying_partial"
+  | "attempted"
   | "missed"
   | "inactive"
   | "scheduled_rest";
@@ -102,9 +105,9 @@ export type DailyExecutionScenario = {
 
 export type DailyExecutionSnapshot = {
   currentTimeLabel: string;
-  warningThresholdLabel: "5:00 PM";
-  deadlineLabel: "10:00 PM";
-  calendarBoundaryLabel: "12:00 AM";
+  warningThresholdLabel: string;
+  deadlineLabel: string;
+  calendarBoundaryLabel: string;
   timeRemainingLabel?: string;
   alertLevel?: ExecutionAlertLevel;
   deadlineState: DailyDeadlineState;

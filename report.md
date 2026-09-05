@@ -500,3 +500,86 @@ codex resume 01a03c77-95f4-7a82-afdd-b00d13c4abfb
 - Validation passed with `npm run build`.
 - No Lifetime XP implementation, final XP calculation, final Boss rules, recommendation ranking, commitment-capacity changes, production anti-gaming penalties, persistence, schema migration, or visible UI redesign was implemented.
 - Deferred to Phase 3.5 and later: final XP/Lifetime XP engine, progression impact policy tuning, Boss integration, recommendation ranking, capacity changes, production persistence, public UI presentation for candidate/risk states, final anti-gaming enforcement, and full monthly progression evaluation.
+
+## Phase 3.7 - Engine Audit, Simulation & Tuning
+
+- Added a development-only simulation package under `src/domain/evolve-engine/simulation`.
+- The simulator runs through the real domain engine services for execution classification, activity development state, behavior/friction, Progression Rating, Current Level, target progression, Boss eligibility/outcomes, recommendations, XP ledger, achievements, titles, Journey events, capacity, and weekly/monthly closeouts.
+- Added deterministic seeded generation with explicit scenario seed and duration support for `1w`, `1m`, `3m`, `6m`, `12m`, and `24m`.
+- Added a structured `SimulationResult` carrying final state, level history, Progression Rating history, XP history, XP ledger, commitment history, capacity/capability history, behavior history, Boss/recommendation/target/adaptation/achievement history, weekly/monthly snapshots, source evidence snapshots, audit metrics, hard invariant failures, and tuning warnings.
+- Implemented Scenario A through Scenario Z plus long-term stagnation, long-term mastery, and boundary suites: ideal beginner, static standard, high-capability low-discipline, high-attendance capability gap, mixed failure, collapsing Core commitment, extreme activity farming, minimum-threshold gaming, heroic catch-up, approved inactive period, reading recovery, successful/failed/abused adaptation, social fairness, lifestyle interference, restraint maintained/violated, high-level climb/collapse/comeback/weak establishment/cycling, Boss rejection/completion, and balanced physical/learning/mixed profiles.
+- Added reusable hard invariant assertions for Lifetime XP permanence, Highest Level permanence, raw evidence immutability, neutral exclusions, missed-history preservation, peak versus sustainable capability separation, one-activity compensation limits, low-confidence consequence restraint, level shock limits, recovery frontier limits, capacity preservation, Boss idempotency, XP idempotency, monthly closeout idempotency, restraint fairness, and social fairness.
+- Tightened XP idempotency auditing so simulation results preserve the final XP ledger and check duplicate transaction IDs, duplicate source keys, replay stability, and monotonic checkpoint transaction counts.
+- Added tuning warnings for suspicious outcomes including fast Level growth, Level growth without development, surplus XP dominance, ignored Core weakness, large checkpoint jumps, sensitive demotion, recovery speed issues, aggressive target escalation, easy capacity unlocks, behavior false positives, social penalties, Boss repetition, and adaptation protection that does not end.
+- Added compact regression fixtures in `src/domain/evolve-engine/simulation/fixtures/regression-fixtures.ts` with qualitative level bands and selected warning/surplus/Core-weakness expectations rather than exact internal decimals.
+- Added `evolveEnginePolicyRegistry` to centralize simulation-visible policy ownership across XP, Progression Rating, level thresholds, target progression, Boss eligibility, recommendations, and commitment capacity without moving factual invariants into tunable config.
+- Added `npm run evolve:simulate` and `npm run evolve:audit` development commands.
+- Added `tests/evolve-engine-phase-3-7.test.ts`.
+- Phase 3.7 tests verify scenario catalog completeness, determinism, hard invariants across the suite, XP source idempotency, accepted regression fixture bands, sensitivity analysis, and behavioral expectations around anti-farming, Core weakness pressure, late catch-up, neutral exclusions, social fairness, interference confidence, adaptation abuse, recovery memory, Highest Level permanence, Level/XP separation, capacity, and Boss farming.
+- Latest validation passed with `npm test`: 153 tests, 153 passed, 0 failed.
+- Latest validation passed with `npm run evolve:audit`: 33 scenarios, 0 hard invariant failures, 7 tuning warnings.
+- Audit warnings observed: static standards can still produce notable Current Level growth in static/stagnation scenarios; target escalation is frequent in extreme farmer, first high-level climb, weak high-level, and long mastery scenarios; earned comeback can repeat similar Boss outcomes.
+- No production UI formulas or hidden coefficients were exposed.
+- No Supabase, authentication, production scheduler, or app integration rewrite was implemented.
+- Performance finding: the slowest scenario in the latest audit was `first-climb-to-high-level` at about 2396ms with 1564 evidence records; current development-state derivation repeatedly scans historical evidence, so Phase 4 persistence should plan snapshot/index support for larger real histories.
+- No policy tuning was applied in this cleanup pass; the suspicious outcomes remain reported as tuning warnings rather than hidden by test assertions.
+- Recommendation: the domain engine is ready for Phase 3.8 integration audit, with known tuning watchpoints around static-standard Level growth, target escalation cadence, and Boss repetition.
+
+## Phase 3.8 - Full Engine Integration Audit & Cleanup
+
+- Audited legacy Phase 2 product logic before changes and classified findings as KEEP, REPLACE, REMOVE, or DEFER.
+- Kept explicit local/demo fixture state because Supabase is deferred, but moved integrated app behavior through `src/application/evolve` commands and selectors.
+- Replaced Daily Quest fixture dependency with active commitment schedule projection through `getScheduledRequirementsForDate` and `getDailyQuestViewModel`.
+- Replaced direct/local Activity Logging progression behavior with `logActivity`, which creates factual ActivityRecords, classifies evidence, preserves after-deadline work separately from missed requirements, and appends idempotent XP ledger transactions.
+- Replaced Boss accept/reject local-only state with command-layer orchestration. Accepted Bosses are stored as active Boss contracts; rejected Bosses are removed from active state and recorded in Boss history.
+- Replaced target recommendation acceptance with target history versioning, future target update, adaptation state creation, and recommendation decision history.
+- Replaced dashboard XP-to-Level progress presentation with Current Level from progression state, Highest Level from progression state, and Lifetime XP from the ledger summary.
+- Replaced hardcoded reading report/current book selector values with `books` plus reading evidence.
+- Replaced scattered Settings deadline labels with centralized `time-policy` labels.
+- Replaced fixed selector freeze/streak demo values with neutral/evidence-derived values.
+- Removed the unused temporary Phase 2 `src/lib/demo/quest-matching.ts` helper.
+- Added repository interfaces for Activities, Evidence, Commitments, Weekly Reminders, Books, Bosses, Recommendations, XP, Achievements, Titles, Journey, and Snapshots with current memory-backed implementations.
+- Added application-level weekly and monthly closeout commands that run domain closeout idempotently and store snapshots for reports/profile/progression consumers.
+- Added active Boss and book state to the local application state contract.
+- Added `docs/evolve-engine-integration.md` covering domain modules, application orchestration, repository boundaries, UI consumers, command flows, closeouts, factual vs derived state, time semantics, legacy audit decisions, and Supabase deferrals.
+- Added `tests/evolve-application-phase-3-8.test.ts` covering Daily Quest derivation, before-deadline logging, late activity preservation, neutral inactive/reading recovery exclusions, Weekly Reminder progression isolation, capacity enforcement, XP/Current Level separation, Boss acceptance persistence, target history, closeout idempotency, and book-derived reading reports.
+- UI pages audited: Dashboard, Today, Journey, Reports, Bosses, Achievements, Improvement Areas, Programs, Settings, Profile/Character, Activity History, and Weekly Reminders now consume application view models where their Phase 3 engine source exists.
+- Remaining intentionally retained demo data: page-local demo state is still recreated from explicit fixtures until Phase 4 persistence/auth work begins.
+- Remaining deferred UI issues: Settings still has local configuration controls that need deeper command wiring once persistence exists; `/quests` and `/auth` remain placeholder routes for later phases; correction/void admin UI is not built.
+- Weekly Reminders remain progression-neutral: completion mutates only reminder state and does not award XP, change Current Level, affect consistency, Boss eligibility, achievements, capacity, or monthly outcome.
+- Time handling is centralized for application scheduling: user timezone, 5 PM attention threshold, 10 PM progression deadline, midnight calendar boundary, and Sunday-Saturday week keys.
+- Performance finding: selectors now centralize derivation, but app pages still recreate demo state per route; Phase 4 should persist snapshots and index evidence by user/activity/period to avoid repeated historical scans.
+- Validation passed with `npm run typecheck`.
+- Validation passed with `npm run lint`.
+- Validation passed with `npm test`: 164 tests, 164 passed, 0 failed.
+- Validation passed with `npm run build`.
+- No Supabase, production auth, RLS, cloud scheduler, or production notification transport was implemented.
+- Phase 4 readiness statement: local repositories now have a replaceable adapter boundary for the major persisted state categories, so database adapters can be introduced without rewriting product components. Some Settings command wiring and scheduler ownership remain Phase 4/5 work, but the main product logic boundary is ready for Phase 3.9 planning and then Supabase.
+
+## Phase 4 - Supabase Backend, Authentication, Persistence & Authoritative Engine Execution
+
+- Added official Supabase dependencies: `@supabase/supabase-js` and `@supabase/ssr`.
+- Added `.env.example` entries for public Supabase URL/key, server-only service role key, `EVOLVE_USE_SUPABASE`, and an optional internal closeout job secret.
+- Added migration `supabase/migrations/20260904000000_phase_4_core.sql`.
+- Migration creates user/profile, Growth Commitment, target version, scheduled requirement, ActivityRecord, evidence, book, exclusion period, behavior event, restraint contract, Weekly Reminder, Boss, recommendation, XP ledger, progression state/history, rating snapshot, weekly/monthly snapshot, achievement, title, capacity, Journey, and closeout tables.
+- Migration adds ownership FKs, integrity checks, idempotency constraints, key indexes, profile bootstrap trigger, update timestamp triggers, and RLS policies.
+- RLS enables own-row reads and intentionally withholds client write policies for consequential tables such as XP, progression, snapshots, achievements, Bosses, recommendations, capacity, and closeouts.
+- Added Next 16 `proxy.ts` route protection/session refresh using the replacement for deprecated middleware.
+- Added Supabase env helpers, browser client, server cookie client, and server-only service-role client under `src/lib/supabase`.
+- Added `createEmptyEvolveState` so new authenticated users start from empty engine state instead of demo history.
+- Added Supabase DTO/domain mappers and `SupabaseEvolveStateRepository`, preserving domain objects in `domain_payload` while keeping ownership, status, time, and policy fields queryable.
+- Added trusted server command entry points for activity logging, serious commitment creation, Weekly Reminder completion, Boss accept/reject, target recommendation accept, recommendation reject, weekly closeout, and monthly closeout.
+- Activity logging now has a server-action path: client sends factual input, server authenticates, loads state, runs the real Phase 3 command/engine, persists ActivityRecords/evidence/XP, and returns a safe dashboard view model.
+- Added `/api/evolve/closeouts` as a development/manual authoritative closeout route with optional bearer-secret protection.
+- Converted main app pages to load through `getCurrentEvolveState`, using Supabase when configured and explicit demo state otherwise.
+- Replaced `/quests` placeholder with the Daily Quest view model derived from application state.
+- Added `/auth` email/password signup, login, logout, and password-reset request forms without redesigning the rest of the UI.
+- Added `docs/evolve-phase-4-supabase.md` documenting architecture, auth, RLS, persistence groups, command flows, deadlines, closeouts, policy provenance, and deferred scheduler/live RLS work.
+- Added `tests/evolve-phase-4-supabase.test.ts` to statically validate migration tables, RLS, server-writable boundaries, idempotency, immutable evidence fields, and auth profile bootstrap.
+- Validation passed with `npm run typecheck`.
+- Validation passed with `npm run lint`.
+- Validation passed with `npm test`: 169 tests, 169 passed, 0 failed.
+- Validation passed with `npm run build`.
+- Live Supabase migration execution and two-user RLS denial tests were not run because no Supabase project/database credentials were provided in this environment.
+- Remaining Phase 4 deployment work: apply migrations to a real Supabase project, generate typed database definitions, run live RLS/security tests, deploy the scheduler/worker for due requirements and closeout catch-up, and decide final production transaction/RPC strategy for multi-row atomicity.
+- Phase 5 readiness statement: the app now has the backend boundary needed for full real-data product integration, but it is not ready to declare production backend complete until live migration/RLS tests pass against an actual Supabase project.

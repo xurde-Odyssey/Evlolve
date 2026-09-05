@@ -164,7 +164,7 @@ function ProfileHero({
             ) : null}
           </div>
           <p className="mt-3 text-sm text-[var(--foreground-muted)]">
-            Level-based avatar placeholder
+            Evolve profile mark
           </p>
         </section>
 

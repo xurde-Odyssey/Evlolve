@@ -22,33 +22,56 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { SystemState } from "@/components/ui/system-state";
+import {
+  createEvolveApplication,
+  getBossViewModel,
+  getEngineProjection,
+  type EvolveLocalState,
+} from "@/application/evolve";
 import { cn } from "@/lib/utils/cn";
 import type { BossChallenge, BossChallengeStatus } from "@/types/boss";
+import type { ServerCommandResponse } from "@/application/evolve/server/commands";
+import type { EvolveServerActionResult } from "@/application/evolve/server/errors";
 
 type BossChallengeWorkspaceProps = {
   initialChallenges: BossChallenge[];
+  initialState?: EvolveLocalState;
+  acceptBossAction?: (
+    bossId: string,
+  ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  rejectBossAction?: (
+    bossId: string,
+  ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
 };
 
 const statusLabels: Record<BossChallengeStatus, string> = {
   offered: "New Boss Available",
   accepted: "Active Boss",
+  in_progress: "In Progress",
   completed: "Boss Defeated",
   failed: "Boss Failed",
   rejected: "Rejected",
+  expired: "Expired",
 };
 
 const statusIcons: Record<BossChallengeStatus, LucideIcon> = {
   offered: Target,
   accepted: Flag,
+  in_progress: Flag,
   completed: CheckCircle2,
   failed: XCircle,
   rejected: CircleSlash,
+  expired: XCircle,
 };
 
 export function BossChallengeWorkspace({
   initialChallenges,
+  initialState,
+  acceptBossAction,
+  rejectBossAction,
 }: BossChallengeWorkspaceProps) {
   const [challenges, setChallenges] = useState(initialChallenges);
+  const [appState, setAppState] = useState(initialState);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const keepButtonRef = useRef<HTMLButtonElement>(null);
   const rejectButtonRef = useRef<HTMLButtonElement>(null);
@@ -83,13 +106,49 @@ export function BossChallengeWorkspace({
     );
   }
 
-  function acceptChallenge(challengeId: string) {
+  async function acceptChallenge(challengeId: string) {
+    if (acceptBossAction) {
+      const result = await acceptBossAction(challengeId);
+      if (!result.ok) return;
+      updateChallengeStatus(challengeId, "accepted");
+      return;
+    }
+
+    if (appState) {
+      const candidate = getEngineProjection(appState).bossEligibility.candidates.find(
+        (item) => item.id === challengeId,
+      );
+
+      if (candidate) {
+        const app = createEvolveApplication(appState);
+        app.acceptBossChallenge(candidate, appState.now);
+        setAppState(app.repositories.getState());
+      }
+    }
+
     updateChallengeStatus(challengeId, "accepted");
   }
 
-  function rejectChallenge() {
+  async function rejectChallenge() {
     if (!rejectingChallenge) {
       return;
+    }
+
+    if (rejectBossAction) {
+      const result = await rejectBossAction(rejectingChallenge.id);
+      if (!result.ok) return;
+    } else if (appState) {
+      const candidate = getEngineProjection(appState).bossEligibility.candidates.find(
+        (item) => item.id === rejectingChallenge.id,
+      );
+
+      if (candidate) {
+        const app = createEvolveApplication(appState);
+        app.rejectBossChallenge(candidate, appState.now);
+        const nextState = app.repositories.getState();
+        setAppState(nextState);
+        setChallenges(getBossViewModel(nextState));
+      }
     }
 
     updateChallengeStatus(rejectingChallenge.id, "rejected");
@@ -194,8 +253,8 @@ export function BossChallengeWorkspace({
                   className="mt-2 text-sm leading-6 text-[var(--foreground-muted)]"
                 >
                   This challenge was generated from your recent performance.
-                  Rejecting it may affect XP, progression, or level standing
-                  once those systems are implemented.
+                  Rejection is recorded as Boss history. XP and Current Level
+                  are not changed by this button.
                 </p>
               </div>
             </div>

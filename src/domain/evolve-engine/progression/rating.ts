@@ -27,6 +27,7 @@ export function calculateProgressionRating(
   const behavioralFrictionPressure = behavioralPressure(input, policy);
   const instabilityPressure = instabilityPressureFromActivities(input.activityStates);
   const rebuildingPressure = rebuildingPressureFromActivities(input.activityStates);
+  const stagnationPressure = stagnationPressureFromActivities(input.activityStates, policy);
   const confidence = confidenceFor(input);
   const raw =
     disciplineContribution +
@@ -39,7 +40,8 @@ export function calculateProgressionRating(
     coreWeaknessPressure -
     behavioralFrictionPressure -
     instabilityPressure -
-    rebuildingPressure;
+    rebuildingPressure -
+    stagnationPressure;
   const conservative = raw * Math.max(confidence, policy.confidenceFloor);
 
   return {
@@ -175,6 +177,48 @@ function rebuildingPressureFromActivities(activityStates: readonly ActivityDevel
       total + (state.capability.baselineState === "REBUILDING" ? 4 * state.capability.confidence : 0),
     0,
   );
+}
+
+function stagnationPressureFromActivities(
+  activityStates: readonly ActivityDevelopmentState[],
+  policy: ProgressionRatingPolicy,
+) {
+  if (activityStates.length === 0) {
+    return 0;
+  }
+
+  const matureStaticActivities = activityStates.filter((state) => {
+    const sustainable = state.capability.sustainableCapability.value;
+    const expectedPerOpportunity =
+      state.executionSummary.eligibleRequirements > 0
+        ? state.executionSummary.expectedOutput / state.executionSummary.eligibleRequirements
+        : null;
+    const surplusRatio =
+      sustainable !== null && expectedPerOpportunity !== null && expectedPerOpportunity > 0
+        ? (sustainable - expectedPerOpportunity) / expectedPerOpportunity
+        : null;
+
+    return (
+      state.capability.baselineState === "ESTABLISHED" &&
+      state.capability.sampleCount >= 30 &&
+      state.capability.momentum === "STABLE" &&
+      state.targetRelationship.state === "APPROPRIATE" &&
+      (state.consistency.value ?? 0) >= 0.9 &&
+      (surplusRatio ?? 0) < 0.08
+    );
+  });
+
+  if (matureStaticActivities.length !== activityStates.length) {
+    return 0;
+  }
+
+  const averageConfidence = average(
+    matureStaticActivities.map((state) =>
+      Math.min(state.capability.confidence, state.consistency.confidence),
+    ),
+  ) ?? 0;
+
+  return policy.stagnationPressureLimit * averageConfidence;
 }
 
 function recoveryContributionFromMemory(recoveryAdvantage: number) {
