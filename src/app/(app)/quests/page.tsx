@@ -1,7 +1,7 @@
 import { DailyQuests } from "@/components/quests/daily-quests";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { getActivityHistoryViewModel, getDailyQuestViewModel, getScheduledRequirementsForCurrentWeek } from "@/application/evolve";
+import { getDailyQuestViewModel, getScheduledRequirementsForCurrentWeek } from "@/application/evolve";
 import { getCurrentEvolveState } from "@/application/evolve/server/queries";
 
 export default async function QuestsPage() {
@@ -15,7 +15,7 @@ export default async function QuestsPage() {
         description="Scheduled requirements derived from active Growth Commitments."
       />
       <DailyQuests
-        activityRecords={getActivityHistoryViewModel(state)}
+        evidence={state.evidence}
         quests={getDailyQuestViewModel(state)}
         weeklyRequirements={getScheduledRequirementsForCurrentWeek(state)}
         now={state.now}

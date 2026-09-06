@@ -159,6 +159,7 @@ export function getDashboardViewModel(state: EvolveLocalState) {
     dailyExecution: getTodayViewModel(state),
     dailyQuests: getDailyQuestViewModel(state),
     weeklyRequirements: getScheduledRequirementsForCurrentWeek(state),
+    evidence: state.evidence,
     now: state.now,
     timePolicy: state.timePolicy,
     activityRecords: getActivityHistoryViewModel(state),
@@ -191,7 +192,7 @@ export function getDailyQuestViewModel(state: EvolveLocalState): DailyQuest[] {
 
   return requirements.map((requirement) => {
     const evidence = getEvidenceForRequirement(state.evidence, requirement);
-    const status = questStatusFromEvidence(requirement, evidence, state.now);
+    const status = getQuestStatusForRequirement(requirement, evidence, state.now);
 
     return {
       id: requirement.id,
@@ -207,6 +208,20 @@ export function getDailyQuestViewModel(state: EvolveLocalState): DailyQuest[] {
       },
     };
   });
+}
+
+export function getQuestStatusForRequirement(
+  requirement: ScheduledRequirement,
+  evidence: ReturnType<typeof getEvidenceForRequirement>,
+  now: string,
+): QuestStatus {
+  if (requirement.exclusionState !== "NONE") return "excluded";
+  if (evidence.some((item) => item.executionState === "FULL")) return "completed";
+  if (evidence.some((item) => item.executionState === "QUALIFYING_PARTIAL")) return "qualifying_partial";
+  if (evidence.some((item) => item.executionState === "ATTEMPT" || item.executionState === "INSUFFICIENT_EFFORT")) return "attempted";
+  if (evidence.some((item) => item.executionState === "MISSED")) return "missed";
+  if (new Date(now).getTime() > new Date(requirement.deadlineAt).getTime()) return "missed";
+  return "pending";
 }
 
 export function getActivityHistoryViewModel(state: EvolveLocalState) {
@@ -731,20 +746,6 @@ export function getProfileViewModel(
       { id: "journey-events", label: "Journey milestones", value: String(getJourneyViewModel(state, projection).completedMilestoneCount), context: "Major events" },
     ],
   };
-}
-
-function questStatusFromEvidence(
-  requirement: ScheduledRequirement,
-  evidence: ReturnType<typeof getEvidenceForRequirement>,
-  now: string,
-): QuestStatus {
-  if (requirement.exclusionState !== "NONE") return "excluded";
-  if (evidence.some((item) => item.executionState === "FULL")) return "completed";
-  if (evidence.some((item) => item.executionState === "QUALIFYING_PARTIAL")) return "qualifying_partial";
-  if (evidence.some((item) => item.executionState === "ATTEMPT" || item.executionState === "INSUFFICIENT_EFFORT")) return "attempted";
-  if (evidence.some((item) => item.executionState === "MISSED")) return "missed";
-  if (new Date(now).getTime() > new Date(requirement.deadlineAt).getTime()) return "missed";
-  return "pending";
 }
 
 function dailyStatusFromQuest(status: QuestStatus): DailyExecutionStatus {

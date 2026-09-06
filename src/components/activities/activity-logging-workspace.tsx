@@ -390,13 +390,17 @@ function ActivityLoggingSession({
       ) : null}
 
       <DailyQuests
-        activityRecords={activityRecords}
+        evidence={appState.evidence}
         quests={quests}
         weeklyRequirements={getScheduledRequirementsForCurrentWeek(appState)}
         now={appState.now}
         timePolicy={appState.timePolicy}
       />
-      <ActivityHistory records={sortedRecords} />
+      <ActivityHistory
+        records={sortedRecords}
+        now={appState.now}
+        timezone={appState.timePolicy.timezone}
+      />
     </div>
   );
 }

@@ -33,7 +33,7 @@ export default async function DashboardPage() {
         capacity={dashboard.improvements.commitmentCapacity}
       />
       <DailyQuests
-        activityRecords={dashboard.activityRecords}
+        evidence={dashboard.evidence}
         quests={dashboard.dailyQuests}
         weeklyRequirements={dashboard.weeklyRequirements}
         now={dashboard.now}
