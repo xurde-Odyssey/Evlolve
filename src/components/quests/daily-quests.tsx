@@ -230,10 +230,14 @@ function WeeklyActivityCalendar({
               const Icon = activityIcons[row.activityKey] ?? activityIcons.custom;
               return (
                 <li key={row.commitmentId} className="flex items-center justify-between gap-3 px-3 py-2.5">
-                  <div className="flex min-w-0 items-center gap-2">
+                  <Link
+                    href="/activities"
+                    aria-label={`Log ${row.title}`}
+                    className="group flex min-w-0 items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-pro)]"
+                  >
                     <span className="grid size-7 shrink-0 place-items-center rounded-md bg-[var(--accent-subtle)] text-[var(--accent-pro)]"><Icon aria-hidden="true" className="size-3.5" /></span>
-                    <span className="truncate text-sm font-semibold text-[var(--foreground)]">{row.title}</span>
-                  </div>
+                    <span className="truncate text-sm font-semibold text-[var(--foreground)] transition group-hover:text-[var(--accent-pro)]">{row.title}</span>
+                  </Link>
                   <span className={cn(
                     "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold",
                     complete ? "bg-[var(--accent-subtle)] text-[var(--accent-pro)]" : "bg-[var(--surface-elevated)] text-[var(--foreground-muted)]",
@@ -274,10 +278,14 @@ function WeeklyActivityCalendar({
               const Icon = activityIcons[row.activityKey] ?? activityIcons.custom;
               return (
                 <div key={row.commitmentId} className="grid grid-cols-[minmax(7rem,1fr)_repeat(7,2rem)] items-center gap-1.5 py-2.5">
-                  <div className="flex min-w-0 items-center gap-2">
+                  <Link
+                    href="/activities"
+                    aria-label={`Log ${row.title}`}
+                    className="group flex min-w-0 items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-pro)]"
+                  >
                     <span className="grid size-7 shrink-0 place-items-center rounded-md bg-[var(--accent-subtle)] text-[var(--accent-pro)]"><Icon aria-hidden="true" className="size-3.5" /></span>
-                    <span className="truncate text-xs font-semibold text-[var(--foreground)]">{row.title}</span>
-                  </div>
+                    <span className="truncate text-xs font-semibold text-[var(--foreground)] transition group-hover:text-[var(--accent-pro)]">{row.title}</span>
+                  </Link>
                   {days.map((day) => {
                     const scheduled = weeklyRequirements.some((requirement) => requirement.commitmentId === row.commitmentId && requirement.scheduledDate === day);
                     const complete = scheduled && isDayComplete(row, day, activityRecords, timePolicy.timezone);
@@ -318,7 +326,12 @@ function isDayComplete(
 ) {
   if (requirement.scheduledDate !== day || requirement.exclusionState !== "NONE") return false;
   return activityRecords.some(
-    (record) => record.commitmentId === requirement.commitmentId && getLocalDateKey(record.occurredAt, timezone) === day,
+    (record) =>
+      record.status === "completed" &&
+      getLocalDateKey(record.occurredAt, timezone) === day &&
+      (record.scheduledRequirementId === requirement.id ||
+        record.commitmentId === requirement.commitmentId ||
+        (!record.commitmentId && record.activityKey === requirement.activityKey)),
   );
 }
 

@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { ArrowUpRight, Award, Flame, Plus, Zap } from "lucide-react";
+import { ArrowUpRight, Award, Flame, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { CoreStone } from "@/components/profile/core-stone";
 import { getCoreStoneStage } from "@/components/profile/core-stone-stage";
@@ -83,10 +82,6 @@ export function DashboardIdentity({ character }: DashboardIdentityProps) {
           <FooterMetric icon={Award} label="Highest level" value={`LV. ${character.highestLevel}`} />
         </div>
 
-        <Link href="/activities" className="mt-5 flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--accent-pro)] px-4 py-2 text-sm font-semibold text-white shadow-[0_8px_20px_color-mix(in_srgb,var(--accent-pro)_22%,transparent)] transition hover:brightness-95 focus-visible:outline-offset-2 sm:hidden">
-          <Plus aria-hidden="true" className="size-4" />
-          Log activity
-        </Link>
       </div>
     </Card>
   );

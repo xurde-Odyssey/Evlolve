@@ -10,6 +10,7 @@ export default async function ActivitiesPage() {
   return (
     <PageContainer>
       <ActivityLoggingWorkspace
+        key={`${state.now}:${state.activityRecords.length}`}
         initialState={state}
         logActivityAction={isSupabaseAuthorityConfigured() ? logActivityAction : undefined}
       />

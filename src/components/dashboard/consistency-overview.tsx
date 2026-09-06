@@ -5,6 +5,7 @@ import {
   Shield,
   Slash,
 } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { SystemState } from "@/components/ui/system-state";
@@ -90,7 +91,12 @@ function ActivityStreakCard({ streak }: { streak: ActivityStreak }) {
       : 0;
 
   return (
-    <li className="rounded-md border border-[var(--border)] bg-[var(--background)] p-3">
+    <li className="rounded-md border border-[var(--border)] bg-[var(--background)]">
+      <Link
+        href="/activities"
+        aria-label={`Log ${streak.activityLabel}`}
+        className="group block rounded-md p-3 transition hover:bg-[var(--surface-elevated)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-pro)]"
+      >
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <ActivityStateIcon state={streak.todayState} />
@@ -153,6 +159,7 @@ function ActivityStreakCard({ streak }: { streak: ActivityStreak }) {
           />
         </div>
       </div>
+      </Link>
     </li>
   );
 }
