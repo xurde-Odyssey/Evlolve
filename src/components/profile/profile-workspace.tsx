@@ -11,7 +11,6 @@ import {
   ShieldCheck,
   Target,
   Trophy,
-  UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +20,8 @@ import { Progress } from "@/components/ui/progress";
 import { SystemState } from "@/components/ui/system-state";
 import { cn } from "@/lib/utils/cn";
 import { formatPercent } from "@/lib/utils/format";
+import { CoreStone } from "@/components/profile/core-stone";
+import { getCoreStoneStage } from "@/components/profile/core-stone-stage";
 import type { Achievement, UserTitle } from "@/types/achievement";
 import type {
   AnalysisInsight,
@@ -103,7 +104,6 @@ export function ProfileWorkspace({ profile, updateProfileAction, selectTitleActi
   return (
     <div className="space-y-5 sm:space-y-6">
       <ProfileHero
-        avatar={profile.avatar}
         level={profile.level}
         onEdit={startEditing}
         personal={personal}
@@ -146,7 +146,6 @@ export function ProfileWorkspace({ profile, updateProfileAction, selectTitleActi
 }
 
 function ProfileHero({
-  avatar,
   personal,
   level,
   selectedTitle,
@@ -154,7 +153,6 @@ function ProfileHero({
   onEdit,
   onSelectTitle,
 }: {
-  avatar: ProfileSnapshot["avatar"];
   personal: PersonalProfile;
   level: ProfileSnapshot["level"];
   selectedTitle?: UserTitle;
@@ -162,30 +160,24 @@ function ProfileHero({
   onEdit: () => void;
   onSelectTitle: (titleId: string) => void;
 }) {
+  const stage = getCoreStoneStage(level.currentLevel);
+
   return (
     <Card className="overflow-hidden p-0">
       <div className="grid gap-0 xl:grid-cols-[minmax(17rem,0.82fr)_minmax(0,1.18fr)]">
         <section className="bg-[var(--surface-elevated)] p-4 sm:p-6">
           <div
-            className="grid min-h-48 place-items-center rounded-lg border border-[var(--border)] bg-[var(--background)] bg-contain bg-center bg-no-repeat transition-[border-color,background-color] [transition-duration:var(--motion-duration-base)] [transition-timing-function:var(--motion-ease)] hover:border-[var(--primary)] sm:min-h-64"
-            role="img"
-            aria-label={avatar.label ?? `${personal.name} avatar`}
-            style={
-              avatar.asset ? { backgroundImage: `url(${avatar.asset})` } : undefined
-            }
+            className="grid min-h-56 place-items-center rounded-lg border border-[var(--border)] bg-[var(--background)] transition-[border-color,background-color] [transition-duration:var(--motion-duration-base)] [transition-timing-function:var(--motion-ease)] hover:border-[var(--primary)] sm:min-h-72"
           >
-            {!avatar.asset ? (
-              <UserRound
-                aria-hidden="true"
-                className="size-20 text-[var(--foreground-muted)]"
-                focusable="false"
-                strokeWidth={1.6}
-              />
-            ) : null}
+            <CoreStone level={level.currentLevel} highestLevel={level.highestLevel} size="lg" />
           </div>
-          <p className="mt-3 text-sm text-[var(--foreground-muted)]">
-            Evolve profile mark
-          </p>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--foreground-muted)]">Core Stone</p>
+              <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">{stage.key}</p>
+            </div>
+            <p className="max-w-36 text-right text-xs leading-5 text-[var(--foreground-muted)]">{stage.description}</p>
+          </div>
         </section>
 
         <section className="space-y-5 p-4 sm:space-y-6 sm:p-6">

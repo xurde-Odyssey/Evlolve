@@ -70,10 +70,7 @@ export function CharacterAttributes({ attributes }: CharacterAttributesProps) {
           const displayPercent = Math.min(Math.max(attribute.progress, 0), 100);
 
           return (
-            <div
-              key={attribute.key}
-              className="min-w-0 rounded-md border border-[var(--border)] bg-[var(--background)] p-3"
-            >
+            <div key={attribute.key} className="min-w-0 border-b border-[var(--border)] py-3 first:pt-0 last:border-b-0 last:pb-0">
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-[var(--foreground)]">

@@ -68,6 +68,21 @@
   --achievement-subtle: color-mix(in srgb, var(--achievement) 12%, transparent);
   --improvement-core-subtle: color-mix(in srgb, var(--primary) 7%, transparent);
   --report-target: color-mix(in srgb, var(--foreground-muted) 42%, transparent);
+  --core-stone-base: #202124;
+  --core-stone-surface: #45474b;
+  --core-stone-highlight: #f1f1ef;
+  --core-stone-edge: #666970;
+  --core-stone-facet-light: #d7d9dc;
+  --core-stone-facet-mid: #8b8e94;
+  --core-stone-facet-dark: #111214;
+  --core-stone-crack: #b8bbc0;
+  --core-stone-core-light: #f4f4f1;
+  --core-stone-core-dark: #8c9097;
+  --core-stone-shadow: #1b1c1f;
+  --core-stone-memory: #7d8088;
+  --core-stone-orbit-color: #777b83;
+  --core-stone-fragment: #d5d7da;
+  --core-stone-risk: #b97984;
 
   --space-page-x: clamp(1rem, 2.5vw, 2rem);
   --space-page-y: clamp(1rem, 2vw, 1.75rem);
@@ -150,6 +165,25 @@ body {
     transform: rotate(360deg);
   }
 }
+
+@keyframes core-stone-pulse {
+  0%, 100% { opacity: 0.76; }
+  50% { opacity: 1; }
+}
+
+@keyframes core-stone-orbit {
+  to { transform: rotate(337deg); }
+}
+
+@keyframes core-stone-drift {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(1px, -2px); }
+}
+
+.core-stone-inner { animation: core-stone-pulse 7s var(--motion-ease) infinite; }
+.core-stone-orbit { transform-origin: 110px 126px; animation: core-stone-orbit 28s linear infinite; }
+.core-stone-fragments { animation: core-stone-drift 6s var(--motion-ease) infinite; }
+.core-stone-static * { animation: none !important; }
 
 a {
   color: inherit;
@@ -267,7 +301,10 @@ select {
   .route-progress-visible,
   .app-loading-line,
   .app-loading-dot,
-  .button-spinner {
+  .button-spinner,
+  .core-stone-inner,
+  .core-stone-orbit,
+  .core-stone-fragments {
     animation: none;
   }
 

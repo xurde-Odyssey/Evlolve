@@ -3,7 +3,6 @@ import { BossPreview } from "@/components/boss/boss-preview";
 import { CharacterAttributes } from "@/components/dashboard/character-attributes";
 import { ConsistencyOverview } from "@/components/dashboard/consistency-overview";
 import { DashboardIdentity } from "@/components/dashboard/dashboard-identity";
-import { ProgressionCard } from "@/components/dashboard/progression-card";
 import { TodayExecution } from "@/components/dashboard/today-execution";
 import { ImprovementsPreview } from "@/components/improvements/improvements-preview";
 import { PageContainer } from "@/components/layout/page-container";
@@ -19,7 +18,6 @@ export default async function DashboardPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(22rem,0.75fr)]">
         <div className="space-y-6">
           <DashboardIdentity character={dashboard.character} />
-          <ProgressionCard progression={dashboard.character} />
           <ConsistencyOverview consistency={dashboard.consistency} />
         </div>
         <CharacterAttributes attributes={dashboard.attributes} />

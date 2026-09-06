@@ -1,6 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ArrowUpRight, Award } from "lucide-react";
+import { ArrowUpRight, Award, Gauge, Zap } from "lucide-react";
 
 export type OverallProgression = {
   level: number;
@@ -20,56 +19,81 @@ export function ProgressionCard({ progression }: ProgressionCardProps) {
   const currentXpText = `${numberFormatter.format(currentXp)} XP`;
 
   return (
-    <Card className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <Card className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
         <div>
-            <Badge tone="success">Current Level</Badge>
-          <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="numeric font-mono text-4xl font-semibold leading-none text-[var(--foreground)]">
-              {progression.level}
-            </span>
-            <span className="text-sm font-semibold text-[var(--foreground-muted)]">
-              Current Level
-            </span>
-          </div>
-        </div>
-
-        <div className="rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-right">
-          <p className="numeric font-mono text-3xl font-semibold leading-none text-[var(--foreground)]">
-            {progression.highestLevel}
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--foreground-muted)]">
+            Progression
           </p>
-          <div className="mt-1 flex items-center justify-end gap-1.5 text-xs font-semibold uppercase text-[var(--foreground-muted)]">
-            <Award aria-hidden="true" className="size-3.5" strokeWidth={1.9} />
-            Highest Level
-          </div>
+          <p className="mt-1 text-sm text-[var(--foreground-muted)]">
+            Your current development position
+          </p>
         </div>
+        <Gauge aria-hidden="true" className="size-5 text-[var(--accent-pro)]" strokeWidth={1.8} />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-md border border-[var(--border)] bg-[var(--background)] p-3">
-          <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">
-            Lifetime XP
-          </p>
-          <p className="numeric mt-1 font-mono text-base font-semibold text-[var(--foreground)]">
-            {currentXpText}
-          </p>
-          <div className="mt-3 h-1 overflow-hidden rounded-full bg-[var(--surface-elevated)]" aria-hidden="true">
-            <div
-              className="h-full rounded-full bg-[var(--accent-pro)]"
-              style={{ width: `${Math.min(currentXp, 100)}%` }}
-            />
-          </div>
-        </div>
-        <div className="rounded-md border border-[var(--border)] bg-[var(--background)] p-3">
-          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase text-[var(--foreground-muted)]">
-            <ArrowUpRight aria-hidden="true" className="size-3.5 text-[var(--success)]" strokeWidth={1.9} />
-            Progression state
-          </p>
-          <p className="mt-1 text-base font-semibold text-[var(--foreground)]">
-            {progression.levelStateLabel ?? "Stable"}
-          </p>
-        </div>
+      <div className="grid gap-2 sm:grid-cols-3">
+        <ProgressionMetric
+          icon={Gauge}
+          label="Current Level"
+          value={String(progression.level)}
+          emphasis
+        />
+        <ProgressionMetric
+          icon={Award}
+          label="Highest Level"
+          value={String(progression.highestLevel)}
+        />
+        <ProgressionMetric
+          icon={Zap}
+          label="Lifetime XP"
+          value={currentXpText}
+          progress={Math.min(currentXp, 100)}
+        />
+      </div>
+
+      <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] pt-3">
+        <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--foreground-muted)]">
+          <ArrowUpRight aria-hidden="true" className="size-3.5 text-[var(--accent-pro)]" strokeWidth={1.9} />
+          Current direction
+        </span>
+        <span className="text-sm font-semibold text-[var(--foreground)]">
+          {progression.levelStateLabel ?? "Stable"}
+        </span>
       </div>
     </Card>
+  );
+}
+
+function ProgressionMetric({
+  icon: Icon,
+  label,
+  value,
+  progress,
+  emphasis = false,
+}: {
+  icon: typeof Gauge;
+  label: string;
+  value: string;
+  progress?: number;
+  emphasis?: boolean;
+}) {
+  return (
+    <div className="min-w-0 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-3">
+      <div className="flex items-center gap-2 text-[var(--foreground-muted)]">
+        <span className="grid size-7 shrink-0 place-items-center rounded-md bg-[var(--accent-subtle)] text-[var(--accent-pro)]">
+          <Icon aria-hidden="true" className="size-3.5" strokeWidth={1.9} />
+        </span>
+        <span className="truncate text-[0.68rem] font-semibold uppercase tracking-[0.06em]">{label}</span>
+      </div>
+      <p className={`numeric mt-3 truncate font-mono font-semibold text-[var(--foreground)] ${emphasis ? "text-3xl" : "text-xl"}`}>
+        {value}
+      </p>
+      {typeof progress === "number" ? (
+        <div className="mt-3 h-1 overflow-hidden rounded-full bg-[var(--surface-elevated)]" aria-hidden="true">
+          <div className="h-full rounded-full bg-[var(--accent-pro)]" style={{ width: `${progress}%` }} />
+        </div>
+      ) : null}
+    </div>
   );
 }

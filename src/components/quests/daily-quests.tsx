@@ -47,13 +47,22 @@ export function DailyQuests({
             Required execution from active commitments.
           </p>
         </div>
-        <div className="shrink-0 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2">
-          <p className="numeric font-mono text-sm font-semibold text-[var(--foreground)]">
-            {completedCount} / {totalCount}
-          </p>
-          <p className="mt-1 text-xs font-semibold uppercase text-[var(--foreground-muted)]">
-            completed
-          </p>
+        <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+          <Link
+            href="/activities"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--accent-pro)]/30 bg-[var(--accent-subtle)] px-3 py-2 text-sm font-semibold text-[var(--accent-pro)] transition hover:border-[var(--accent-pro)] focus-visible:outline-offset-2"
+          >
+            <ClipboardPenLine aria-hidden="true" className="size-4" strokeWidth={1.9} />
+            Today&apos;s exercise
+          </Link>
+          <div className="rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2">
+            <p className="numeric font-mono text-sm font-semibold text-[var(--foreground)]">
+              {completedCount} / {totalCount}
+            </p>
+            <p className="mt-1 text-xs font-semibold uppercase text-[var(--foreground-muted)]">
+              completed
+            </p>
+          </div>
         </div>
       </div>
 
