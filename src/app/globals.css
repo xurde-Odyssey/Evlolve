@@ -119,6 +119,38 @@ body {
   }
 }
 
+@keyframes route-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes route-progress {
+  0% {
+    transform: scaleX(0.08);
+  }
+
+  55% {
+    transform: scaleX(0.68);
+  }
+
+  100% {
+    transform: scaleX(0.9);
+  }
+}
+
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -158,6 +190,65 @@ select {
   animation: panel-enter var(--motion-duration-panel) var(--motion-ease) both;
 }
 
+.route-page-enter {
+  animation: route-page-enter var(--motion-duration-panel) var(--motion-ease) both;
+}
+
+.route-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 100;
+  height: 2px;
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: left;
+  background: var(--accent-pro);
+  box-shadow: 0 1px 10px color-mix(in srgb, var(--accent-pro) 35%, transparent);
+  transition: opacity var(--motion-duration-fast) var(--motion-ease);
+}
+
+.route-progress-visible {
+  opacity: 1;
+  animation: route-progress 1.2s var(--motion-ease) infinite;
+}
+
+.app-loading {
+  position: relative;
+  min-height: 12rem;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--foreground-muted);
+}
+
+.app-loading-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 35%;
+  height: 2px;
+  background: var(--accent-pro);
+  animation: route-progress 1.2s var(--motion-ease) infinite;
+}
+
+.app-loading-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--accent-pro);
+  box-shadow: 0 0 0 0.45rem var(--accent-subtle);
+  animation: panel-enter 900ms var(--motion-ease) infinite alternate;
+}
+
+.button-spinner {
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 999px;
+  animation: button-spin 700ms linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -170,6 +261,18 @@ select {
 
   .motion-panel {
     animation: none;
+  }
+
+  .route-page-enter,
+  .route-progress-visible,
+  .app-loading-line,
+  .app-loading-dot,
+  .button-spinner {
+    animation: none;
+  }
+
+  .route-progress-visible {
+    opacity: 1;
   }
 }
 

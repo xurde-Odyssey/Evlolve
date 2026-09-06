@@ -148,6 +148,7 @@ export function SettingsWorkspace({
   );
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [bookaholicActivationOpen, setBookaholicActivationOpen] = useState(false);
 
   const activeCommitments = activities.filter((activity) => activity.active).length;
@@ -258,6 +259,8 @@ export function SettingsWorkspace({
   }
 
   async function saveSettings() {
+    if (isSaving) return;
+
     const readingPages = Number(bookPages);
     const validationError =
       validateConfiguredActivities(activities) ??
@@ -269,11 +272,13 @@ export function SettingsWorkspace({
       return;
     }
 
+    setIsSaving(true);
     if (updateActivityAction) {
       const activeConfigurations = activities.filter((activity) => activity.active);
       for (const activity of activeConfigurations) {
         const result = await updateActivityAction(activity);
         if (!result.ok) {
+          setIsSaving(false);
           setStatusMessage(null);
           setErrorMessage(result.message);
           return;
@@ -282,11 +287,13 @@ export function SettingsWorkspace({
       router.refresh();
       setErrorMessage(null);
       setStatusMessage("Activity settings saved.");
+      setIsSaving(false);
       return;
     }
 
     setErrorMessage(null);
     setStatusMessage("Settings prepared for this development workspace.");
+    setIsSaving(false);
   }
 
   function handleCustomSubmit(event: FormEvent<HTMLFormElement>) {
@@ -449,8 +456,9 @@ export function SettingsWorkspace({
       />
 
       <div className="flex justify-end">
-        <Button className="w-full sm:w-auto" onClick={saveSettings}>
-          Save Settings
+        <Button className="w-full gap-2 sm:w-auto" onClick={saveSettings} disabled={isSaving}>
+          {isSaving ? <span className="button-spinner" aria-hidden="true" /> : null}
+          {isSaving ? "Saving..." : "Save Settings"}
         </Button>
       </div>
     </div>
