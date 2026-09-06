@@ -14,11 +14,11 @@ export function Badge({ children, tone = "neutral" }: BadgeProps) {
         tone === "neutral" &&
           "border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--foreground-muted)]",
         tone === "accent" &&
-          "border-[var(--border)] bg-[var(--accent-subtle)] text-[var(--accent)]",
+          "border-[var(--accent-pro)]/30 bg-[var(--accent-subtle)] text-[var(--accent-pro)]",
         tone === "success" &&
-          "border-[var(--border)] bg-[var(--success-subtle)] text-[var(--success)]",
+          "border-[var(--success)]/30 bg-[var(--success-subtle)] text-[var(--success)]",
         tone === "warning" &&
-          "border-[var(--border)] bg-[var(--warning-subtle)] text-[var(--warning)]",
+          "border-[var(--warning)]/30 bg-[var(--warning-subtle)] text-[var(--warning)]",
       )}
     >
       {children}

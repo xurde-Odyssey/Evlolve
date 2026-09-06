@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { LogOut } from "lucide-react";
+import { signOutAction } from "@/app/auth/actions";
 import { LogoMark } from "@/components/brand/logo-mark";
 import { primaryRoutes, secondaryRoutes } from "@/config/navigation";
 import { APP_NAME } from "@/lib/constants/app";
@@ -16,7 +18,7 @@ export function SidebarNavigation() {
               {APP_NAME}
             </p>
             <p className="truncate text-xs text-[var(--foreground-muted)]">
-              Personal progression
+              Personal development
             </p>
           </div>
         </Link>
@@ -47,6 +49,22 @@ export function SidebarNavigation() {
               />
             ))}
           </nav>
+        </div>
+
+        <div className="mt-auto border-t border-[var(--border)] pt-4">
+          <form action={signOutAction}>
+            <button
+              className="group flex min-h-10 w-full items-center gap-2.5 rounded-md px-3 text-sm font-medium text-[var(--foreground-muted)] transition hover:bg-[var(--muted)] hover:text-[var(--foreground)] focus-visible:outline-offset-2"
+              type="submit"
+            >
+              <LogOut
+                aria-hidden="true"
+                className="size-4 opacity-75 transition group-hover:opacity-100"
+                strokeWidth={1.9}
+              />
+              <span>Sign out</span>
+            </button>
+          </form>
         </div>
       </div>
     </aside>

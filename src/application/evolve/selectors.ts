@@ -18,13 +18,14 @@ import {
   type CoreWeaknessSignal,
   type DevelopmentPillar,
   type LevelProgressionState,
+  analyzeAdaptiveIntelligence,
 } from "../../domain/evolve-engine";
 import { defaultAchievementDefinitions } from "../../domain/evolve-engine/achievements/definitions";
 import { createDevelopmentAnalysis } from "../../domain/evolve-engine/analysis/development-analysis";
 import { activityDefinitions } from "../../config/activity-definitions";
-import { demoPersona } from "../../lib/demo/demo-persona";
 import type { CharacterAttribute } from "../../components/dashboard/character-attributes";
 import type { CharacterIdentityData } from "../../components/dashboard/dashboard-identity";
+import type { ActivityKey } from "../../types/activity";
 import type { AchievementSnapshot, Achievement, UserTitle } from "../../types/achievement";
 import type { Book } from "../../types/book";
 import type { BossChallenge } from "../../types/boss";
@@ -38,6 +39,7 @@ import type { PeriodReport, ReportsSnapshot } from "../../types/report";
 import type { WeeklyReminderSnapshot } from "../../types/weekly-reminder";
 import {
   getCalendarBoundaryLabel,
+  getLocalDateKey,
   getNotificationDeadlineState,
   getProgressionDeadlineLabel,
   getReminderThresholdLabel,
@@ -169,7 +171,7 @@ export function getDashboardProgressionViewModel(
   projection = getEngineProjection(state),
 ): CharacterIdentityData {
   return {
-    name: demoPersona.name,
+    name: state.profile?.displayName ?? "Your profile",
     level: projection.levelState.currentLevel,
     highestLevel: projection.levelState.highestLevel.level,
     currentXp: projection.xp.totalLifetimeXp,
@@ -487,16 +489,16 @@ export function getJourneyViewModel(
   state: EvolveLocalState,
   projection = getEngineProjection(state),
 ): JourneySnapshot {
-  const achievementMilestones = getAchievementSnapshot(state, projection).achievements
-    .filter((achievement) => achievement.status === "earned" && achievement.major)
-    .map((achievement): JourneyMilestone => ({
-      id: `journey:${achievement.id}`,
-      type: "achievement",
-      title: achievement.title,
-      description: achievement.description,
+  const milestones = state.journeyEvents
+    .map((event): JourneyMilestone => ({
+      id: event.id,
+      type: journeyMilestoneType(event.type),
+      title: event.title,
+      description: event.description,
       status: "completed",
-      completedAt: achievement.earnedAt,
-    }));
+      completedAt: event.occurredAt,
+    }))
+    .sort((left, right) => (right.completedAt ?? "").localeCompare(left.completedAt ?? ""));
   const current: JourneyMilestone = {
     id: "journey:current-level",
     type: "level",
@@ -509,10 +511,29 @@ export function getJourneyViewModel(
   return {
     currentLevel: projection.levelState.currentLevel,
     highestLevel: projection.levelState.highestLevel.level,
-    completedMilestoneCount: achievementMilestones.length,
+    completedMilestoneCount: milestones.length,
     currentMilestoneLabel: current.title,
-    milestones: [...achievementMilestones, current],
+    milestones: [...milestones, current],
   };
+}
+
+function journeyMilestoneType(
+  type: EvolveLocalState["journeyEvents"][number]["type"],
+): JourneyMilestone["type"] {
+  switch (type) {
+    case "MAJOR_ACHIEVEMENT":
+      return "achievement";
+    case "BOSS_BREAKTHROUGH":
+      return "boss";
+    case "LEVEL_MILESTONE_CONFIRMED":
+      return "level";
+    case "PREVIOUS_STANDARD_RECOVERED":
+      return "phase";
+    case "COMMITMENT_CAPACITY_UNLOCKED":
+      return "unlock";
+    default:
+      return "phase";
+  }
 }
 
 export function getReportsViewModel(
@@ -525,6 +546,7 @@ export function getReportsViewModel(
       key: "this_week",
       label: "This Week",
       rangeLabel: "Sunday-Saturday",
+      status: "PROVISIONAL",
     },
     overview: {
       requiredCommitments: weekly.eligibleRequirements,
@@ -622,20 +644,32 @@ export function getProfileViewModel(
     behavioralFriction: deriveBehavioralFriction({ signals: [], restraintEvaluations: [] }),
   });
   const achievements = getAchievementSnapshot(state, projection);
+  const adaptive = analyzeAdaptiveIntelligence({
+    activityStates: projection.activityStates,
+    evidence: state.evidence,
+    commitments: state.commitments,
+    now: state.now,
+  });
 
   return {
     personal: {
-      name: demoPersona.name,
-      age: 29,
-      goals: ["Improve endurance", "Read consistently", "Build career skills"],
+      name: state.profile?.displayName ?? "Your profile",
+      age: state.profile?.age,
+      heightCm: state.profile?.heightCm,
+      weightKg: state.profile?.weightKg,
+      goals: state.profile?.goals ?? [],
     },
     avatar: { asset: "/evolve.svg", label: "Evolve profile mark" },
     level: {
       currentLevel: projection.levelState.currentLevel,
       highestLevel: projection.levelState.highestLevel.level,
       totalXp: projection.xp.totalLifetimeXp,
-      evolvingSince: demoPersona.evolvingSince,
-      activeDays: demoPersona.activeDays,
+      evolvingSince: state.profile?.evolveSince?.slice(0, 10) ?? "Not established",
+      activeDays: new Set(
+        state.activityRecords.map((record) =>
+          getLocalDateKey(record.occurredAt, state.timePolicy.timezone),
+        ),
+      ).size,
     },
     titles: achievements.titles,
     consistency: {
@@ -670,18 +704,20 @@ export function getProfileViewModel(
     })),
     monthlyAnalysis: {
       periodLabel: "Current month",
-      summary: monthlySummary(analysis.strongestDevelopment, analysis.weakestDevelopment),
-      strongestAreas: analysis.strongestDevelopment.map((pillar) => ({
-        id: `strong:${pillar}`,
-        title: pillar,
+      summary: adaptive.analysis.meaningfulChange ?? monthlySummary(analysis.strongestDevelopment, analysis.weakestDevelopment),
+      strongestAreas: adaptive.analysis.strongestDevelopment.slice(0, 3).map((activityId) => ({
+        id: `strong:${activityId}`,
+        activityKey: activityId as ActivityKey,
+        title: activityLabel(activityId),
         direction: "strong",
-        evidence: ["Current domain analysis marks this pillar as a stronger area."],
+        evidence: ["Your recent capability and execution evidence support this as a stronger area."],
       })),
-      weakAreas: analysis.weakestDevelopment.map((pillar) => ({
-        id: `weak:${pillar}`,
-        title: pillar,
+      weakAreas: (adaptive.analysis.primaryConstraint ? [adaptive.analysis.primaryConstraint] : analysis.weakestDevelopment).slice(0, 3).map((activityId) => ({
+        id: `weak:${activityId}`,
+        activityKey: activityId as ActivityKey,
+        title: activityLabel(activityId),
         direction: "weak",
-        evidence: ["Current domain analysis marks this pillar as limiting."],
+        evidence: ["Your recent evidence suggests this area should be stabilized before adding more load."],
       })),
     },
     majorAchievements: achievements.achievements.filter((achievement) => achievement.major && achievement.status === "earned"),
@@ -827,7 +863,10 @@ function titleViewModels(
     sourceId: result.title.sourceId,
     eligibility: result.eligibility === "ELIGIBLE" ? "active" : "inactive",
     earnedAt: result.title.earnedAt.slice(0, 10),
-    selected: Boolean(result.title.selected && result.eligibility === "ELIGIBLE"),
+    selected: Boolean(
+      (state.profile?.selectedTitleId === result.title.id || result.title.selected) &&
+        result.eligibility === "ELIGIBLE",
+    ),
   }));
 }
 

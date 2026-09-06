@@ -1,14 +1,17 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import {
   Bell,
   BookOpen,
   CheckCircle2,
+  Check,
   Circle,
   LockKeyhole,
   Moon,
   Plus,
+  Power,
   ShieldCheck,
   SlidersHorizontal,
   Trash2,
@@ -52,6 +55,9 @@ type SettingsWorkspaceProps = {
   ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
   deactivateActivityAction?: (
     activityKey: ActivityKey,
+  ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  updateActivityAction?: (
+    configuration: ActivityConfiguration,
   ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
 };
 
@@ -121,7 +127,9 @@ export function SettingsWorkspace({
   activateActivityAction,
   activateBookaholicAction,
   deactivateActivityAction,
+  updateActivityAction,
 }: SettingsWorkspaceProps) {
+  const router = useRouter();
   const [activities, setActivities] = useState(snapshot.activityConfigurations);
   const [notifications, setNotifications] = useState(
     snapshot.notificationPreferences,
@@ -199,6 +207,9 @@ export function SettingsWorkspace({
       ...activity,
       active: nextActive,
     }));
+    if (activateActivityAction || deactivateActivityAction) {
+      router.refresh();
+    }
   }
 
   async function activateBookaholic() {
@@ -228,6 +239,7 @@ export function SettingsWorkspace({
     setBookaholicActivationOpen(false);
     setErrorMessage(null);
     setStatusMessage("Bookaholic is active. Your first target starts at 5 pages.");
+    router.refresh();
   }
 
   function handleMeasurementChange(
@@ -245,7 +257,7 @@ export function SettingsWorkspace({
     }));
   }
 
-  function saveSettings() {
+  async function saveSettings() {
     const readingPages = Number(bookPages);
     const validationError =
       validateConfiguredActivities(activities) ??
@@ -257,8 +269,24 @@ export function SettingsWorkspace({
       return;
     }
 
+    if (updateActivityAction) {
+      const activeConfigurations = activities.filter((activity) => activity.active);
+      for (const activity of activeConfigurations) {
+        const result = await updateActivityAction(activity);
+        if (!result.ok) {
+          setStatusMessage(null);
+          setErrorMessage(result.message);
+          return;
+        }
+      }
+      router.refresh();
+      setErrorMessage(null);
+      setStatusMessage("Activity settings saved.");
+      return;
+    }
+
     setErrorMessage(null);
-    setStatusMessage("Settings saved locally for this demo.");
+    setStatusMessage("Settings prepared for this development workspace.");
   }
 
   function handleCustomSubmit(event: FormEvent<HTMLFormElement>) {
@@ -619,7 +647,7 @@ function SettingsOverview({
             Execution rules and configuration
           </h2>
         </div>
-        <Badge tone={availableSlots > 0 ? "neutral" : "warning"}>
+        <Badge tone={availableSlots > 0 ? "success" : "accent"}>
           {activeCommitments} / {snapshot.commitmentCapacity} active
         </Badge>
       </div>
@@ -696,7 +724,7 @@ function ActivityConfigurationPanel({
                     <h3 className="text-base font-semibold text-[var(--foreground)]">
                       {activity.activityLabel}
                     </h3>
-                    <Badge tone={activity.active ? "accent" : "neutral"}>
+                    <Badge tone={activity.active ? "success" : "accent"}>
                       {activity.active ? "Active" : "Inactive"}
                     </Badge>
                     <span className="rounded-md bg-[var(--surface-elevated)] px-2 py-1 text-xs font-semibold text-[var(--foreground-muted)]">
@@ -709,12 +737,19 @@ function ActivityConfigurationPanel({
                   </p>
                 </div>
                 <Button
-                  variant={activity.active ? "secondary" : "primary"}
+                  variant="ghost"
+                  className={cn(
+                    "gap-2 border",
+                    activity.active
+                      ? "border-[var(--accent-pro)]/35 text-[var(--accent-pro)] hover:border-[var(--accent-pro)] hover:bg-[var(--accent-subtle)]"
+                      : "border-[var(--success)]/35 text-[var(--success)] hover:border-[var(--success)] hover:bg-[var(--success-subtle)]",
+                  )}
                   disabled={!activity.active && activeCommitments >= capacity}
                   onClick={() =>
                     onToggleActivity(activity.activityKey, !activity.active)
                   }
                 >
+                  <Power aria-hidden="true" className="size-4" strokeWidth={1.9} />
                   {activity.active ? "Deactivate" : "Activate"}
                 </Button>
               </div>
@@ -800,6 +835,10 @@ function ScheduleEditor({
   }
 
   function toggleDay(day: Weekday) {
+    if (selectedDays.length === 1 && selectedDays.includes(day)) {
+      return;
+    }
+
     const nextDays = selectedDays.includes(day)
       ? selectedDays.filter((selectedDay) => selectedDay !== day)
       : [...selectedDays, day];
@@ -847,37 +886,58 @@ function ScheduleEditor({
       ) : null}
 
       {schedule.type === "selected_days" ? (
-        <div
-          className="grid grid-cols-4 gap-2 sm:grid-cols-7"
-          aria-label={`${idPrefix} selected days`}
-        >
-          {weekdays.map((day) => {
-            const selected = selectedDays.includes(day);
+        <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-2">
+          <div
+            className="grid grid-cols-7 gap-1.5"
+            aria-label={`${idPrefix} selected days`}
+            role="group"
+          >
+            {weekdays.map((day) => {
+              const selected = selectedDays.includes(day);
 
-            return (
-              <button
-                key={day}
-                className={cn(
-                  "min-h-10 rounded-md border px-2 text-sm font-semibold transition",
-                  selected
-                    ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)]"
-                    : "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground-muted)]",
-                )}
-                type="button"
-                aria-pressed={selected}
-                aria-label={weekdayNames[day]}
-                onClick={() => toggleDay(day)}
-              >
-                {weekdayLabels[day]}
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={day}
+                  className={cn(
+                    "group relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md border px-1 text-xs font-semibold transition focus-visible:z-10",
+                    selected
+                      ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)] shadow-[var(--shadow-soft)]"
+                      : "border-transparent bg-[var(--background)] text-[var(--foreground-muted)] hover:border-[var(--border)] hover:text-[var(--foreground)]",
+                  )}
+                  type="button"
+                  aria-pressed={selected}
+                  aria-label={`${weekdayNames[day]}${selected ? " selected" : ""}`}
+                  onClick={() => toggleDay(day)}
+                >
+                  <span className="text-[0.68rem] uppercase tracking-[0.08em]">
+                    {weekdayLabels[day]}
+                  </span>
+                  <span
+                    className={cn(
+                      "grid size-4 place-items-center rounded-full border",
+                      selected
+                        ? "border-[var(--primary-foreground)]/70 bg-[var(--primary-foreground)]/15"
+                        : "border-[var(--border)] bg-[var(--surface)]",
+                    )}
+                  >
+                    {selected ? <Check aria-hidden="true" className="size-3" strokeWidth={2.4} /> : null}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-3 border-t border-[var(--border)] pt-2 text-xs text-[var(--foreground-muted)]">
+            <span>{selectedDays.length} {selectedDays.length === 1 ? "day" : "days"} selected</span>
+            <span>{formatSchedule(schedule)}</span>
+          </div>
         </div>
       ) : null}
 
-      <p className="text-xs text-[var(--foreground-muted)]">
-        {formatSchedule(schedule)}
-      </p>
+      {schedule.type !== "selected_days" ? (
+        <p className="text-xs text-[var(--foreground-muted)]">
+          {formatSchedule(schedule)}
+        </p>
+      ) : null}
     </fieldset>
   );
 }
@@ -921,7 +981,7 @@ function InactiveModePanel({ snapshot }: { snapshot: SettingsSnapshot }) {
                     : "Available this month"}
                 </p>
               </div>
-              <Badge tone={item.usedThisMonth ? "warning" : "accent"}>
+              <Badge tone={item.usedThisMonth ? "accent" : "success"}>
                 {item.usedThisMonth ? "Used" : "Available"}
               </Badge>
             </div>

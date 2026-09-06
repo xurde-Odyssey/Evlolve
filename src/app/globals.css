@@ -49,14 +49,14 @@
 
   --surface-elevated: var(--card);
   --foreground-muted: var(--muted-foreground);
-  --success: var(--accent-pro);
-  --warning: var(--primary);
+  --success: #f12e54;
+  --warning: #9a7446;
   --xp: var(--accent-pro);
   --chrome-surface: var(--sidebar);
   --emphasis-border: var(--sidebar-border);
   --accent-subtle: color-mix(in srgb, var(--accent-pro) 10%, transparent);
-  --success-subtle: color-mix(in srgb, var(--accent-pro) 12%, transparent);
-  --warning-subtle: var(--muted);
+  --success-subtle: color-mix(in srgb, var(--success) 12%, transparent);
+  --warning-subtle: color-mix(in srgb, var(--warning) 10%, transparent);
   --streak-calm: oklch(62% 0.13 238);
   --streak-steady: oklch(55% 0.16 246);
   --streak-focused: oklch(49% 0.16 254);
@@ -122,6 +122,16 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/* Content icons share the Evolve accent; colored controls can opt back into white. */
+.app-content svg {
+  color: var(--accent-pro);
+}
+
+.app-content .text-white svg,
+.app-content svg.text-white {
+  color: white;
 }
 
 button,

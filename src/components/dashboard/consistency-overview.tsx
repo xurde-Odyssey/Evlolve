@@ -8,6 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { SystemState } from "@/components/ui/system-state";
+import { activityIcons } from "@/config/icon-maps";
 import { cn } from "@/lib/utils/cn";
 import type {
   ActivityStreak,
@@ -82,6 +83,7 @@ export function ConsistencyOverview({
 
 function ActivityStreakCard({ streak }: { streak: ActivityStreak }) {
   const isInactive = streak.status === "inactive";
+  const ActivityIcon = activityIcons[streak.activityKey] ?? activityIcons.custom;
   const progress =
     streak.bestStreak > 0
       ? Math.min(Math.round((streak.currentStreak / streak.bestStreak) * 100), 100)
@@ -93,14 +95,24 @@ function ActivityStreakCard({ streak }: { streak: ActivityStreak }) {
         <div className="flex min-w-0 items-start gap-3">
           <ActivityStateIcon state={streak.todayState} />
           <div className="min-w-0">
-            <p
-              className={cn(
-                "truncate text-sm font-semibold text-[var(--foreground)]",
-                isInactive && "text-[var(--foreground-muted)]",
-              )}
-            >
-              {streak.activityLabel}
-            </p>
+            <div className="flex min-w-0 items-center gap-2">
+              <span
+                className={cn(
+                  "grid size-7 shrink-0 place-items-center rounded-md text-white",
+                  isInactive ? "bg-[var(--foreground-muted)]" : "bg-[var(--success)]",
+                )}
+              >
+                <ActivityIcon aria-hidden="true" className="size-4" strokeWidth={1.9} />
+              </span>
+              <p
+                className={cn(
+                  "truncate text-sm font-semibold text-[var(--foreground)]",
+                  isInactive && "text-[var(--foreground-muted)]",
+                )}
+              >
+                {streak.activityLabel}
+              </p>
+            </div>
             <span
               className={cn(
                 "mt-1 inline-flex rounded-md px-2 py-0.5 text-[0.7rem] font-semibold",
@@ -135,7 +147,7 @@ function ActivityStreakCard({ streak }: { streak: ActivityStreak }) {
               "h-full rounded-full",
               streak.todayState === "missed" || streak.todayState === "inactive"
                 ? "bg-[var(--foreground-muted)]"
-                : "bg-[var(--accent-pro)]",
+                : "bg-[var(--success)]",
             )}
             style={{ width: `${progress}%` }}
           />
@@ -155,7 +167,7 @@ function ActivityStateIcon({ state }: { state: ActivityStreakTodayState }) {
       <span className={wrapperClassName}>
         <CheckCircle2
           aria-hidden="true"
-          className={`${className} text-[var(--accent-pro)]`}
+          className={`${className} text-[var(--success)]`}
           focusable="false"
           strokeWidth={1.9}
         />
@@ -243,7 +255,7 @@ function getCompactStateLabel(streak: ActivityStreak) {
 
 function getStateClassName(state: ActivityStreakTodayState) {
   if (state === "completed") {
-    return "bg-[var(--accent-subtle)] text-[var(--foreground)]";
+    return "bg-[var(--success-subtle)] text-[var(--success)]";
   }
 
   if (state === "missed") {

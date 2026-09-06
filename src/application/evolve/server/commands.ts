@@ -58,6 +58,14 @@ export type BookaholicActivationInput = {
   recoveryDays: 2 | 3;
 };
 
+export type ProfileUpdateInput = {
+  name: string;
+  age?: number;
+  heightCm?: number;
+  weightKg?: number;
+  goals?: string[];
+};
+
 export async function logActivityAuthoritatively(
   input: ServerActivityLogInput,
 ): Promise<EvolveServerActionResult<ServerActivityLogResponse>> {
@@ -109,6 +117,55 @@ export async function logActivityAuthoritatively(
   }
 }
 
+export async function updateProfileAuthoritatively(
+  input: ProfileUpdateInput,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  const user = await requireAuthenticatedUser();
+  if (!user) return errorResult("AUTH_REQUIRED", "Sign in before updating your profile.");
+  if (!input.name.trim()) return errorResult("INVALID_PROFILE", "Name is required.");
+  if (input.age !== undefined && (!Number.isInteger(input.age) || input.age < 0 || input.age > 130)) {
+    return errorResult("INVALID_PROFILE", "Age must be between 0 and 130.");
+  }
+  if (input.heightCm !== undefined && input.heightCm <= 0) {
+    return errorResult("INVALID_PROFILE", "Height must be positive.");
+  }
+  if (input.weightKg !== undefined && input.weightKg <= 0) {
+    return errorResult("INVALID_PROFILE", "Weight must be positive.");
+  }
+
+  const serviceClient = createSupabaseServiceClient();
+  const response = await serviceClient.from("profiles").update({
+    display_name: input.name.trim(),
+    age: input.age ?? null,
+    height_cm: input.heightCm ?? null,
+    weight_kg: input.weightKg ?? null,
+    goals: input.goals?.map((goal) => goal.trim()).filter(Boolean) ?? [],
+  }).eq("id", user.id);
+  if (response.error) return errorResult("INVALID_PROFILE", "Profile could not be updated.");
+
+  const state = await new SupabaseEvolveStateRepository(serviceClient).loadState(user.id);
+  return successResult({ dashboard: getDashboardViewModel(state) });
+}
+
+export async function selectTitleAuthoritatively(
+  titleId: string,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  const user = await requireAuthenticatedUser();
+  if (!user) return errorResult("AUTH_REQUIRED", "Sign in before selecting a title.");
+  const serviceClient = createSupabaseServiceClient();
+  const repository = new SupabaseEvolveStateRepository(serviceClient);
+  const state = await repository.loadState(user.id);
+  const title = state.titles.find((item) => item.id === titleId);
+  if (!title) {
+    return errorResult("TITLE_NOT_ELIGIBLE", "That title is not currently eligible.");
+  }
+  const titleRow = await serviceClient.from("title_awards").select("id").eq("user_id", user.id).eq("domain_id", titleId).maybeSingle();
+  if (titleRow.error || !titleRow.data) return errorResult("TITLE_NOT_ELIGIBLE", "That title is not currently eligible.");
+  const response = await serviceClient.from("profiles").update({ selected_title_id: titleRow.data.id }).eq("id", user.id);
+  if (response.error) return errorResult("TITLE_NOT_ELIGIBLE", "Title selection could not be saved.");
+  return successResult({ dashboard: getDashboardViewModel(await repository.loadState(user.id)) });
+}
+
 export async function createCommitmentAuthoritatively(
   commitment: GrowthCommitment,
 ): Promise<EvolveServerActionResult<ServerCommandResponse>> {
@@ -138,6 +195,36 @@ export async function activateConfiguredActivityAuthoritatively(
     }
 
     createSeriousCommitment(memory, commitmentFromConfiguration(configuration, now));
+  });
+}
+
+export async function updateConfiguredActivityAuthoritatively(
+  configuration: ActivityConfiguration,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  return mutateState((memory) => {
+    const state = memory.getState();
+    const commitment = state.commitments.find(
+      (item) => item.activityKey === configuration.activityKey,
+    );
+
+    if (!commitment) {
+      throw new Error("Commitment is not currently configured.");
+    }
+
+    memory.replaceState({
+      ...state,
+      commitments: state.commitments.map((item) =>
+        item.id === commitment.id
+          ? {
+              ...item,
+              title: configuration.activityLabel,
+              measurementType: configuration.measurementType,
+              unit: configuration.unit,
+              schedule: scheduleFromConfiguration(configuration),
+            }
+          : item,
+      ),
+    });
   });
 }
 

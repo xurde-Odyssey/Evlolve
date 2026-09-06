@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   LockKeyhole,
@@ -20,9 +21,13 @@ import type {
   ImprovementSnapshot,
   PredefinedImprovementArea,
 } from "@/types/improvement";
+import type { ActivityKey } from "@/types/activity";
 
 type ImprovementsWorkspaceProps = {
   snapshot: ImprovementSnapshot;
+  deactivateActivityAction?: (
+    activityKey: ActivityKey,
+  ) => Promise<{ ok: boolean; message?: string }>;
 };
 
 const tierLabels: Record<CommitmentTier, string> = {
@@ -35,10 +40,14 @@ const tierOrder: CommitmentTier[] = ["core", "priority", "flexible"];
 
 export function ImprovementsWorkspace({
   snapshot,
+  deactivateActivityAction,
 }: ImprovementsWorkspaceProps) {
+  const router = useRouter();
   const [areas, setAreas] = useState(snapshot.areas);
   const [removingAreaId, setRemovingAreaId] = useState<string | null>(null);
   const [programMessage, setProgramMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
   const keepButtonRef = useRef<HTMLButtonElement>(null);
   const removeButtonRef = useRef<HTMLButtonElement>(null);
   const removingArea = areas.find((area) => area.id === removingAreaId);
@@ -53,8 +62,28 @@ export function ImprovementsWorkspace({
     }
   }, [removingArea]);
 
-  function removeFlexibleArea() {
-    if (!removingArea || removingArea.tier !== "flexible") {
+  async function removeFlexibleArea() {
+    if (
+      !removingArea ||
+      removingArea.tier !== "flexible" ||
+      !removingArea.activityKey
+    ) {
+      return;
+    }
+
+    setActionError(null);
+    setIsRemoving(true);
+
+    if (deactivateActivityAction) {
+      const result = await deactivateActivityAction(removingArea.activityKey);
+      if (!result.ok) {
+        setActionError(result.message ?? "This commitment could not be removed.");
+        setIsRemoving(false);
+        return;
+      }
+      setRemovingAreaId(null);
+      setIsRemoving(false);
+      router.refresh();
       return;
     }
 
@@ -70,6 +99,7 @@ export function ImprovementsWorkspace({
       ),
     );
     setRemovingAreaId(null);
+    setIsRemoving(false);
   }
 
   function handleProgramActivation(program: EvolveProgram) {
@@ -83,24 +113,9 @@ export function ImprovementsWorkspace({
       return;
     }
 
-    setAreas((currentAreas) => [
-      ...currentAreas,
-      ...program.areas
-        .filter((programArea) => !hasCompatibleArea(programArea, currentAreas))
-        .map((programArea, index): ImprovementArea => ({
-          id: `${program.id}-${index}`,
-          title: programArea.title,
-          activityKey: programArea.activityKey,
-          tier: "priority",
-          status: "active",
-          startedAt: "2026-08-27",
-          source: "program",
-          programId: program.id,
-          progressBehavior: "cumulative",
-          measurementLabel: "Contributes to Daily Quests",
-        })),
-    ]);
-    setProgramMessage(`${program.title} activated without duplicate areas.`);
+    setProgramMessage(
+      `${program.title} is ready to activate, but program activation is not available for this account yet.`,
+    );
   }
 
   function handleDialogKeyDown(event: KeyboardEvent<HTMLElement>) {
@@ -207,6 +222,11 @@ export function ImprovementsWorkspace({
             </div>
 
             <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              {actionError ? (
+                <p className="mr-auto text-sm font-semibold text-[var(--danger)]" role="alert">
+                  {actionError}
+                </p>
+              ) : null}
               <Button
                 ref={keepButtonRef}
                 variant="secondary"
@@ -218,8 +238,9 @@ export function ImprovementsWorkspace({
                 ref={removeButtonRef}
                 variant="ghost"
                 onClick={removeFlexibleArea}
+                disabled={isRemoving}
               >
-                Remove
+                {isRemoving ? "Removing..." : "Remove"}
               </Button>
             </div>
           </section>
@@ -249,7 +270,7 @@ function CapacityOverview({
             Active improvement areas are intentionally limited.
           </p>
         </div>
-        <Badge tone={availableSlots > 0 ? "neutral" : "warning"}>
+        <Badge tone={availableSlots > 0 ? "success" : "accent"}>
           {availableSlots > 0 ? `${availableSlots} slot open` : "Capacity reached"}
         </Badge>
       </div>
@@ -340,7 +361,14 @@ function ImprovementAreaCard({
             <Badge tone={area.tier === "core" ? "warning" : "neutral"}>
               {tierLabels[area.tier]}
             </Badge>
-            <span className="rounded-md bg-[var(--surface-elevated)] px-2 py-1 text-xs font-semibold text-[var(--foreground-muted)]">
+            <span
+              className={cn(
+                "rounded-md border px-2 py-1 text-xs font-semibold",
+                area.status === "active"
+                  ? "border-[var(--success)]/25 bg-[var(--success-subtle)] text-[var(--success)]"
+                  : "border-[var(--accent-pro)]/25 bg-[var(--accent-subtle)] text-[var(--accent-pro)]",
+              )}
+            >
               {area.status}
             </span>
           </div>

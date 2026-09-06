@@ -22,9 +22,12 @@ import type {
   AchievementStatus,
   UserTitle,
 } from "@/types/achievement";
+import type { ServerCommandResponse } from "@/application/evolve/server/commands";
+import type { EvolveServerActionResult } from "@/application/evolve/server/errors";
 
 type AchievementsWorkspaceProps = {
   snapshot: AchievementSnapshot;
+  selectTitleAction?: (titleId: string) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
 };
 
 type CategoryFilter = "all" | AchievementCategory;
@@ -60,7 +63,7 @@ const categoryIcons: Record<AchievementCategory, LucideIcon> = {
   lifetime: Crown,
 };
 
-export function AchievementsWorkspace({ snapshot }: AchievementsWorkspaceProps) {
+export function AchievementsWorkspace({ snapshot, selectTitleAction }: AchievementsWorkspaceProps) {
   const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>("all");
   const [titles, setTitles] = useState(snapshot.titles);
   const visibleAchievements = useMemo(
@@ -85,7 +88,11 @@ export function AchievementsWorkspace({ snapshot }: AchievementsWorkspaceProps) 
     (achievement) => achievement.major,
   ).length;
 
-  function selectTitle(titleId: string) {
+  async function selectTitle(titleId: string) {
+    if (selectTitleAction) {
+      const result = await selectTitleAction(titleId);
+      if (!result.ok) return;
+    }
     setTitles((currentTitles) =>
       currentTitles.map((title) => ({
         ...title,

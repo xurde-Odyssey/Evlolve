@@ -6,7 +6,9 @@ export type EvolveServerErrorCode =
   | "CAPACITY_EXCEEDED"
   | "COMMITMENT_LOCKED"
   | "ENGINE_CLOSEOUT_ALREADY_PROCESSED"
-  | "SUPABASE_NOT_CONFIGURED";
+  | "SUPABASE_NOT_CONFIGURED"
+  | "INVALID_PROFILE"
+  | "TITLE_NOT_ELIGIBLE";
 
 export type EvolveServerActionResult<TData> =
   | {

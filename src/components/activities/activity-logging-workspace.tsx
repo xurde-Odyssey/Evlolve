@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { ClipboardPenLine } from "lucide-react";
 import { activityDefinitions } from "@/config/activity-definitions";
 import { activityIcons } from "@/config/icon-maps";
 import { ActivityHistory } from "@/components/activities/activity-history";
@@ -8,6 +10,7 @@ import { DailyQuests } from "@/components/quests/daily-quests";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SystemState } from "@/components/ui/system-state";
+import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
 import {
   createEvolveApplication,
@@ -59,6 +62,7 @@ function ActivityLoggingSession({
   initialState,
   logActivityAction,
 }: ActivityLoggingWorkspaceProps) {
+  const router = useRouter();
   const [appState, setAppState] = useState<EvolveLocalState>(initialState);
   const activityRecords = appState.activityRecords;
   const quests = getDailyQuestViewModel(appState);
@@ -182,6 +186,7 @@ function ActivityLoggingSession({
         matchedQuestCount: result.data.matchedRequirementCount,
       });
       setLastSubmissionSignature(submissionSignature);
+      router.refresh();
       setIsSubmitting(false);
       return;
     }
@@ -244,19 +249,22 @@ function ActivityLoggingSession({
                 aria-pressed={selected}
                 className={`group flex min-h-20 items-center gap-3 rounded-lg border p-3 text-left transition ${
                   selected
-                    ? "border-[var(--primary)] bg-[var(--background)] shadow-[var(--shadow-soft)]"
-                    : "border-[var(--border)] bg-[var(--surface-elevated)] hover:border-[var(--primary)]"
+                    ? "border-[var(--success)] bg-[var(--success-subtle)] shadow-[var(--shadow-soft)]"
+                    : "border-[var(--border)] bg-[var(--surface-elevated)] hover:border-[var(--success)] hover:bg-[var(--success-subtle)]"
                 }`}
                 onClick={() => handleCommitmentChange(commitment)}
               >
-                <span className="grid size-10 shrink-0 place-items-center rounded-md bg-[var(--accent-subtle)] text-[var(--primary)]">
+                <span className="grid size-10 shrink-0 place-items-center rounded-md bg-[var(--success)] text-white shadow-[0_6px_16px_color-mix(in_srgb,var(--success)_22%,transparent)] transition group-hover:scale-[1.03]">
                   <Icon aria-hidden="true" className="size-5" strokeWidth={1.8} />
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-semibold text-[var(--foreground)]">
                     {commitment.title}
                   </span>
-                  <span className="mt-1 block truncate text-xs text-[var(--foreground-muted)]">
+                  <span className={cn(
+                    "mt-1 block truncate text-xs",
+                    selected ? "font-semibold text-[var(--success)]" : "text-[var(--foreground-muted)]",
+                  )}>
                     Target: {commitment.targetValue} {commitment.unit}
                   </span>
                 </span>
@@ -372,7 +380,8 @@ function ActivityLoggingSession({
             </div>
           ) : null}
 
-          <Button className="min-w-36" type="submit" disabled={isSubmitting}>
+          <Button className="min-w-36 gap-2" type="submit" disabled={isSubmitting}>
+            <ClipboardPenLine aria-hidden="true" className="size-4" strokeWidth={1.9} />
             {isSubmitting ? "Recording..." : "Record Activity"}
           </Button>
         </form>

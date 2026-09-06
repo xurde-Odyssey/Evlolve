@@ -27,6 +27,7 @@ import type { ProgressionRatingPolicy } from "../progression/policy";
 import type { LevelThresholdPolicy } from "../progression/thresholds";
 import type { RecommendationEnginePolicy } from "../recommendation/engine";
 import type { TargetProgressionPolicy } from "../target/progression";
+import type { AdaptiveIntelligencePolicy } from "../adaptive/policy";
 
 export type SimulationDuration =
   | "1w"
@@ -143,6 +144,7 @@ export type SimulationOptions = {
 };
 
 export type SimulationPolicyOverrides = {
+  adaptiveIntelligence?: Partial<AdaptiveIntelligencePolicy>;
   progressionRating?: Partial<ProgressionRatingPolicy>;
   levelThresholds?: Partial<LevelThresholdPolicy>;
   targetProgression?: Partial<TargetProgressionPolicy>;
@@ -152,6 +154,7 @@ export type SimulationPolicyOverrides = {
 };
 
 export type SimulationPolicySet = {
+  adaptiveIntelligence: AdaptiveIntelligencePolicy;
   progressionRating: ProgressionRatingPolicy;
   levelThresholds: LevelThresholdPolicy;
   targetProgression: TargetProgressionPolicy;

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createDemoEvolveState, getDashboardViewModel, type EvolveLocalState } from "@/application/evolve";
+import { createEmptyEvolveState, getDashboardViewModel, type EvolveLocalState } from "@/application/evolve";
 import { SupabaseEvolveStateRepository } from "@/infrastructure/supabase/evolve-state-repository";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { isSupabaseAuthorityConfigured } from "@/lib/supabase/env";
@@ -20,7 +20,7 @@ export async function getCurrentEvolveState(): Promise<EvolveLocalState> {
   const user = await getCurrentUser();
 
   if (!user) {
-    return createDemoEvolveState();
+    return createEmptyEvolveState({ userId: "unauthenticated" });
   }
 
   const repository = new SupabaseEvolveStateRepository(createSupabaseServiceClient());

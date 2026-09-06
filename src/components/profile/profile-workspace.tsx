@@ -30,14 +30,18 @@ import type {
   ProfileEvidenceMetric,
   ProfileSnapshot,
 } from "@/types/profile";
+import type { ProfileUpdateInput, ServerCommandResponse } from "@/application/evolve/server/commands";
+import type { EvolveServerActionResult } from "@/application/evolve/server/errors";
 
 type ProfileWorkspaceProps = {
   profile: ProfileSnapshot;
+  updateProfileAction?: (input: ProfileUpdateInput) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  selectTitleAction?: (titleId: string) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
 };
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 
-export function ProfileWorkspace({ profile }: ProfileWorkspaceProps) {
+export function ProfileWorkspace({ profile, updateProfileAction, selectTitleAction }: ProfileWorkspaceProps) {
   const [personal, setPersonal] = useState(profile.personal);
   const [draft, setDraft] = useState(profile.personal);
   const [titles, setTitles] = useState(profile.titles);
@@ -47,7 +51,14 @@ export function ProfileWorkspace({ profile }: ProfileWorkspaceProps) {
     titles.find((title) => title.selected) ??
     titles.find((title) => title.eligibility === "active");
 
-  function selectTitle(titleId: string) {
+  async function selectTitle(titleId: string) {
+    if (selectTitleAction) {
+      const result = await selectTitleAction(titleId);
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+    }
     setTitles((currentTitles) =>
       currentTitles.map((title) => ({
         ...title,
@@ -62,7 +73,7 @@ export function ProfileWorkspace({ profile }: ProfileWorkspaceProps) {
     setIsEditing(true);
   }
 
-  function saveProfile(event: FormEvent<HTMLFormElement>) {
+  async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const validationError = validatePersonalProfile(draft);
 
@@ -71,11 +82,19 @@ export function ProfileWorkspace({ profile }: ProfileWorkspaceProps) {
       return;
     }
 
-    setPersonal({
+    const normalized = {
       ...draft,
       name: draft.name.trim(),
       goals: draft.goals?.map((goal) => goal.trim()).filter(Boolean),
-    });
+    };
+    if (updateProfileAction) {
+      const result = await updateProfileAction(normalized satisfies ProfileUpdateInput);
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+    }
+    setPersonal(normalized);
     setError(null);
     setIsEditing(false);
   }

@@ -54,12 +54,14 @@ export function CharacterAttributes({ attributes }: CharacterAttributesProps) {
             Current activity record
           </h2>
         </div>
-        <MessageCircle
-          aria-hidden="true"
-          className="size-5 shrink-0 text-[var(--foreground-muted)]"
-          focusable="false"
-          strokeWidth={1.9}
-        />
+        <span className="grid size-9 shrink-0 place-items-center rounded-md bg-[var(--accent-pro)] text-white shadow-[0_6px_16px_color-mix(in_srgb,var(--accent-pro)_20%,transparent)]">
+          <MessageCircle
+            aria-hidden="true"
+            className="size-4"
+            focusable="false"
+            strokeWidth={1.9}
+          />
+        </span>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
@@ -84,7 +86,7 @@ export function CharacterAttributes({ attributes }: CharacterAttributesProps) {
                     {attribute.context}
                   </p>
                 </div>
-                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-[var(--surface-elevated)] text-[var(--foreground)]">
+                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-[var(--accent-subtle)] text-[var(--accent-pro)]">
                   <Icon
                     aria-hidden="true"
                     className="size-4"

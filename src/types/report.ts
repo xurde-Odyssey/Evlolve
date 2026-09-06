@@ -19,6 +19,7 @@ export type ReportPeriod = {
   key: ReportPeriodKey;
   label: string;
   rangeLabel: string;
+  status?: "PROVISIONAL" | "OFFICIAL";
 };
 
 export type ReadingActivityRecord = {

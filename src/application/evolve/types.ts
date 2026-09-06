@@ -54,6 +54,18 @@ export type GrowthCommitment = {
   targetHistory: readonly TargetHistoryRecord[];
 };
 
+export type EvolveProfile = {
+  displayName?: string;
+  age?: number;
+  heightCm?: number;
+  weightKg?: number;
+  goals?: string[];
+  timezone: string;
+  evolveSince?: string;
+  onboardingState?: string;
+  selectedTitleId?: string;
+};
+
 export type ScheduledRequirement = {
   id: string;
   commitmentId: string;
@@ -73,6 +85,7 @@ export type EvolveLocalState = {
   userId: string;
   now: string;
   timePolicy: UserTimePolicy;
+  profile?: EvolveProfile;
   commitments: GrowthCommitment[];
   activityRecords: ActivityRecord[];
   evidence: ActivityExecutionEvidence[];

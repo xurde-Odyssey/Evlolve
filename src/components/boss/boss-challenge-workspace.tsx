@@ -7,6 +7,7 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -70,6 +71,7 @@ export function BossChallengeWorkspace({
   acceptBossAction,
   rejectBossAction,
 }: BossChallengeWorkspaceProps) {
+  const router = useRouter();
   const [challenges, setChallenges] = useState(initialChallenges);
   const [appState, setAppState] = useState(initialState);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -111,6 +113,7 @@ export function BossChallengeWorkspace({
       const result = await acceptBossAction(challengeId);
       if (!result.ok) return;
       updateChallengeStatus(challengeId, "accepted");
+      router.refresh();
       return;
     }
 
@@ -152,6 +155,7 @@ export function BossChallengeWorkspace({
     }
 
     updateChallengeStatus(rejectingChallenge.id, "rejected");
+    router.refresh();
     setRejectingId(null);
   }
 

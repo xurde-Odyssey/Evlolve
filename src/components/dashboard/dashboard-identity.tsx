@@ -81,6 +81,12 @@ export function DashboardIdentity({ character }: DashboardIdentityProps) {
                 <p className="numeric mt-1 font-mono text-lg font-semibold text-[var(--foreground)]">
                   {numberFormatter.format(boundedCurrentXp)}
                 </p>
+                <div className="mt-3 h-1 overflow-hidden rounded-full bg-[var(--surface-elevated)]" aria-hidden="true">
+                  <div
+                    className="h-full rounded-full bg-[var(--accent-pro)]"
+                    style={{ width: `${Math.min(boundedCurrentXp, 100)}%` }}
+                  />
+                </div>
               </div>
               <div className="rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2">
                 <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">

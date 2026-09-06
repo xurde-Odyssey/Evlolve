@@ -3,6 +3,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { ProfileWorkspace } from "@/components/profile/profile-workspace";
 import { getProfileViewModel } from "@/application/evolve";
 import { getCurrentEvolveState } from "@/application/evolve/server/queries";
+import { isSupabaseAuthorityConfigured } from "@/lib/supabase/env";
+import { selectTitleAction, updateProfileAction } from "./actions";
 
 export default async function CharacterPage() {
   const state = await getCurrentEvolveState();
@@ -14,7 +16,11 @@ export default async function CharacterPage() {
         title="Profile / Character"
         description="Identity, discipline, records, and evidence of long-term development."
       />
-      <ProfileWorkspace profile={getProfileViewModel(state)} />
+      <ProfileWorkspace
+        profile={getProfileViewModel(state)}
+        updateProfileAction={isSupabaseAuthorityConfigured() ? updateProfileAction : undefined}
+        selectTitleAction={isSupabaseAuthorityConfigured() ? selectTitleAction : undefined}
+      />
     </PageContainer>
   );
 }

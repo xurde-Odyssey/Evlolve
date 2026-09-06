@@ -49,6 +49,14 @@ type SupabaseQueryError = {
 
 type ProfileRow = {
   timezone: string;
+  display_name: string | null;
+  age: number | null;
+  height_cm: number | null;
+  weight_kg: number | null;
+  goals: unknown;
+  evolve_since: string | null;
+  onboarding_state: string;
+  selected_title_id: string | null;
 };
 
 type ProgressionStateRow = {
@@ -71,7 +79,7 @@ export class SupabaseEvolveStateRepository {
           id: userId,
           timezone,
         },
-        { onConflict: "id" },
+        { onConflict: "id", ignoreDuplicates: true },
       )
       .select("timezone")
       .maybeSingle();
@@ -125,6 +133,19 @@ export class SupabaseEvolveStateRepository {
 
     return {
       ...state,
+      profile: profile ? {
+        displayName: profile.display_name ?? undefined,
+        age: profile.age ?? undefined,
+        heightCm: profile.height_cm ?? undefined,
+        weightKg: profile.weight_kg ?? undefined,
+        goals: Array.isArray(profile.goals)
+          ? profile.goals.filter((goal): goal is string => typeof goal === "string")
+          : [],
+        timezone: profile.timezone,
+        evolveSince: profile.evolve_since ?? undefined,
+        onboardingState: profile.onboarding_state,
+        selectedTitleId: profile.selected_title_id ?? undefined,
+      } : state.profile,
       commitments,
       activityRecords,
       evidence,
@@ -295,7 +316,7 @@ export class SupabaseEvolveStateRepository {
   private async getProfile(userId: string) {
     const response = await this.client
       .from("profiles")
-      .select("timezone")
+      .select("timezone, display_name, age, height_cm, weight_kg, goals, evolve_since, onboarding_state, selected_title_id")
       .eq("id", userId)
       .maybeSingle();
 

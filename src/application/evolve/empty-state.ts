@@ -31,6 +31,7 @@ export function createEmptyEvolveState({
     userId,
     now,
     timePolicy,
+    profile: { timezone },
     commitments: [],
     activityRecords: [],
     evidence: [],

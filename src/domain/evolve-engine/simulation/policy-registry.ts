@@ -7,11 +7,16 @@ import {
 import { defaultRecommendationEnginePolicy } from "../recommendation/engine";
 import { defaultTargetProgressionPolicy } from "../target/progression";
 import { defaultXpPolicy } from "../xp/policy";
+import { defaultAdaptiveIntelligencePolicy } from "../adaptive/policy";
 import type { SimulationPolicyOverrides, SimulationPolicySet } from "./types";
 
 export const evolveEnginePolicyRegistry = {
   version: "phase-3.7-audit-registry",
   owners: {
+    adaptiveIntelligence: {
+      owner: "domain/evolve-engine/adaptive",
+      policy: defaultAdaptiveIntelligencePolicy,
+    },
     xp: {
       owner: "domain/evolve-engine/xp",
       policy: defaultXpPolicy,
@@ -57,6 +62,10 @@ export function createSimulationPolicySet(
   overrides: SimulationPolicyOverrides = {},
 ): SimulationPolicySet {
   return {
+    adaptiveIntelligence: {
+      ...defaultAdaptiveIntelligencePolicy,
+      ...overrides.adaptiveIntelligence,
+    },
     progressionRating: {
       ...defaultProgressionRatingPolicy,
       ...overrides.progressionRating,

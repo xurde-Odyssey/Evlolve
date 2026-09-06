@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, Circle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Circle, ClipboardPenLine } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { SystemState } from "@/components/ui/system-state";
@@ -178,7 +178,8 @@ function QuestStatusIcon({ status }: { status: QuestStatus }) {
 function QuestAction({ status }: { status: QuestStatus }) {
   if (status === "completed" || status === "qualifying_partial") {
     return (
-      <span className="inline-flex min-h-10 min-w-28 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-elevated)] px-4 py-2 text-sm font-semibold text-[var(--foreground-muted)]">
+      <span className="inline-flex min-h-10 min-w-28 items-center justify-center gap-2 rounded-md border border-[var(--success)]/30 bg-[var(--success-subtle)] px-4 py-2 text-sm font-semibold text-[var(--success)]">
+        <CheckCircle2 aria-hidden="true" className="size-4" strokeWidth={1.9} />
         {status === "qualifying_partial" ? "Partial" : "Completed"}
       </span>
     );
@@ -186,7 +187,8 @@ function QuestAction({ status }: { status: QuestStatus }) {
 
   if (status === "missed") {
     return (
-      <span className="inline-flex min-h-10 min-w-28 items-center justify-center rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground-muted)]">
+      <span className="inline-flex min-h-10 min-w-28 items-center justify-center gap-2 rounded-md border border-[var(--accent-pro)]/30 bg-[var(--accent-subtle)] px-4 py-2 text-sm font-semibold text-[var(--accent-pro)]">
+        <AlertCircle aria-hidden="true" className="size-4" strokeWidth={1.9} />
         Missed
       </span>
     );
@@ -194,7 +196,8 @@ function QuestAction({ status }: { status: QuestStatus }) {
 
   if (status === "excluded") {
     return (
-      <span className="inline-flex min-h-10 min-w-28 items-center justify-center rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground-muted)]">
+      <span className="inline-flex min-h-10 min-w-28 items-center justify-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-elevated)] px-4 py-2 text-sm font-semibold text-[var(--foreground-muted)]">
+        <Circle aria-hidden="true" className="size-4" strokeWidth={1.9} />
         Excluded
       </span>
     );
@@ -202,7 +205,8 @@ function QuestAction({ status }: { status: QuestStatus }) {
 
   if (status === "attempted") {
     return (
-      <span className="inline-flex min-h-10 min-w-28 items-center justify-center rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground-muted)]">
+      <span className="inline-flex min-h-10 min-w-28 items-center justify-center gap-2 rounded-md border border-[var(--warning)]/30 bg-[var(--warning-subtle)] px-4 py-2 text-sm font-semibold text-[var(--warning)]">
+        <AlertCircle aria-hidden="true" className="size-4" strokeWidth={1.9} />
         Attempted
       </span>
     );
@@ -211,8 +215,9 @@ function QuestAction({ status }: { status: QuestStatus }) {
   return (
     <Link
       href="/activities"
-      className="inline-flex min-h-10 min-w-28 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-elevated)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)]"
+      className="inline-flex min-h-10 min-w-28 items-center justify-center gap-2 rounded-md border border-[var(--primary)]/25 bg-[var(--surface-elevated)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)]"
     >
+      <ClipboardPenLine aria-hidden="true" className="size-4" strokeWidth={1.9} />
       Log Activity
     </Link>
   );

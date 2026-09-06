@@ -152,7 +152,12 @@ function PerformanceOverview({ report }: { report: PeriodReport }) {
             {report.period.rangeLabel}
           </p>
         </div>
-        <Badge tone="neutral">{report.overview.activitiesTracked} tracked</Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="neutral">{report.overview.activitiesTracked} tracked</Badge>
+          <Badge tone={report.period.status === "OFFICIAL" ? "accent" : "warning"}>
+            {report.period.status === "OFFICIAL" ? "Official" : "Provisional"}
+          </Badge>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">

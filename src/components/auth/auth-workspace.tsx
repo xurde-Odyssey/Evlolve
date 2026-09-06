@@ -1,6 +1,7 @@
 import { ArrowRight, LockKeyhole } from "lucide-react";
 import { signInAction } from "@/app/auth/actions";
 import { LogoMark } from "@/components/brand/logo-mark";
+import { PasswordField } from "@/components/auth/password-field";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -24,9 +25,6 @@ export function AuthWorkspace({ nextPath, errorMessage }: AuthWorkspaceProps) {
           <h1 className="mt-3 text-3xl font-semibold tracking-normal text-[var(--foreground)] sm:text-4xl">
             Welcome back
           </h1>
-          <p className="mt-3 max-w-sm text-sm leading-6 text-[var(--foreground-muted)]">
-            Continue building a clearer record of your progress.
-          </p>
         </div>
 
         <Card className="space-y-6 p-5 sm:p-7">
@@ -38,9 +36,6 @@ export function AuthWorkspace({ nextPath, errorMessage }: AuthWorkspaceProps) {
               <h2 className="text-base font-semibold text-[var(--foreground)]">
                 Sign in to your account
               </h2>
-              <p className="mt-1 text-xs text-[var(--foreground-muted)]">
-                Your commitments and progression are waiting.
-              </p>
             </div>
           </div>
 
@@ -56,7 +51,10 @@ export function AuthWorkspace({ nextPath, errorMessage }: AuthWorkspaceProps) {
               </p>
             ) : null}
             <AuthField label="Email address" name="email" type="email" />
-            <AuthField label="Password" name="password" type="password" />
+            <label className="block space-y-2 text-sm font-medium text-[var(--foreground)]">
+              <span>Password</span>
+              <PasswordField />
+            </label>
             <Button className="w-full gap-2" disabled={!configured} type="submit">
               Sign in
               <ArrowRight aria-hidden="true" className="size-4" strokeWidth={2} />
@@ -70,9 +68,6 @@ export function AuthWorkspace({ nextPath, errorMessage }: AuthWorkspaceProps) {
           ) : null}
         </Card>
 
-        <p className="text-center text-xs text-[var(--foreground-muted)]">
-          Private workspace | Your data stays tied to your account
-        </p>
       </div>
     </div>
   );

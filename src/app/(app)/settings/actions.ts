@@ -6,6 +6,7 @@ import {
   activateBookaholicAuthoritatively,
   type BookaholicActivationInput,
   deactivateConfiguredActivityAuthoritatively,
+  updateConfiguredActivityAuthoritatively,
   type ServerCommandResponse,
 } from "@/application/evolve/server/commands";
 import type { EvolveServerActionResult } from "@/application/evolve/server/errors";
@@ -37,6 +38,17 @@ export async function deactivateActivityAction(
   activityKey: ActivityConfiguration["activityKey"],
 ): Promise<EvolveServerActionResult<ServerCommandResponse>> {
   const result = await deactivateConfiguredActivityAuthoritatively(activityKey);
+  if (result.ok) {
+    revalidatePath("/settings");
+    revalidatePath("/activities");
+  }
+  return result;
+}
+
+export async function updateActivityAction(
+  configuration: ActivityConfiguration,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  const result = await updateConfiguredActivityAuthoritatively(configuration);
   if (result.ok) {
     revalidatePath("/settings");
     revalidatePath("/activities");
