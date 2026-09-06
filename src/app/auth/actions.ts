@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { defaultUserTimePolicy } from "@/application/evolve/time-policy";
 
 export async function signInAction(formData: FormData): Promise<void> {
   if (!isSupabaseConfigured()) {
@@ -30,7 +31,7 @@ export async function signUpAction(formData: FormData): Promise<void> {
   const email = getRequiredFormString(formData, "email");
   const password = getRequiredFormString(formData, "password");
   const displayName = getOptionalFormString(formData, "displayName");
-  const timezone = getOptionalFormString(formData, "timezone") ?? "UTC";
+  const timezone = getOptionalFormString(formData, "timezone") ?? defaultUserTimePolicy.timezone;
   const next = getNextPath(formData);
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signUp({

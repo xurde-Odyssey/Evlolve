@@ -391,6 +391,7 @@ function ActivityLoggingSession({
 
       <DailyQuests
         evidence={appState.evidence}
+        weeklyReminders={appState.weeklyReminders}
         quests={quests}
         weeklyRequirements={getScheduledRequirementsForCurrentWeek(appState)}
         now={appState.now}

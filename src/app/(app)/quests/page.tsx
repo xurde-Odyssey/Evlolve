@@ -16,6 +16,7 @@ export default async function QuestsPage() {
       />
       <DailyQuests
         evidence={state.evidence}
+        weeklyReminders={state.weeklyReminders}
         quests={getDailyQuestViewModel(state)}
         weeklyRequirements={getScheduledRequirementsForCurrentWeek(state)}
         now={state.now}

@@ -80,6 +80,7 @@ export type ScheduledRequirement = {
   unit: string;
   measurementType: MeasurementType;
   exclusionState: ActivityExecutionEvidence["exclusionState"];
+  weeklyQuota?: number;
 };
 
 export type EvolveLocalState = {

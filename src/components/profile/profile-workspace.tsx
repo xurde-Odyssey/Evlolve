@@ -145,6 +145,35 @@ export function ProfileWorkspace({ profile, updateProfileAction, selectTitleActi
   );
 }
 
+function PersonalGoals({ goals }: { goals: string[] }) {
+  const savedGoals = goals.filter((goal) => goal.trim().length > 0);
+
+  return (
+    <section className="mt-5 space-y-4 rounded-md border border-[var(--border)] bg-[var(--background)] p-4">
+      <div className="flex items-center gap-3">
+        <Target aria-hidden="true" className="size-4 text-[var(--accent-pro)]" strokeWidth={1.9} />
+        <div>
+          <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">Personal goals</p>
+          <p className="mt-1 text-sm text-[var(--foreground-muted)]">Your current direction.</p>
+        </div>
+      </div>
+      {savedGoals.length > 0 ? (
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {savedGoals.map((goal, index) => (
+            <li key={`${goal}-${index}`} className="rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm font-semibold text-[var(--foreground)]">
+              {goal}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="rounded-md border border-dashed border-[var(--border)] px-3 py-3 text-sm text-[var(--foreground-muted)]">
+          Add personal goals from Edit Profile.
+        </p>
+      )}
+    </section>
+  );
+}
+
 function ProfileHero({
   personal,
   level,
@@ -178,6 +207,7 @@ function ProfileHero({
             </div>
             <p className="max-w-36 text-right text-xs leading-5 text-[var(--foreground-muted)]">{stage.description}</p>
           </div>
+          <PersonalGoals goals={personal.goals ?? []} />
         </section>
 
         <section className="space-y-5 p-4 sm:space-y-6 sm:p-6">
@@ -298,9 +328,12 @@ function ProfileEditForm({
   const goals = draft.goals ?? [];
 
   function updateGoal(index: number, value: string) {
+    const nextGoals = Array.from({ length: 4 }, (_, goalIndex) =>
+      goalIndex === index ? value : goals[goalIndex] ?? "",
+    );
     onChange({
       ...draft,
-      goals: goals.map((goal, goalIndex) => (goalIndex === index ? value : goal)),
+      goals: nextGoals,
     });
   }
 
@@ -357,6 +390,7 @@ function ProfileEditForm({
               <input
                 key={index}
                 className="min-h-10 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)]"
+                type="text"
                 value={goals[index] ?? ""}
                 onChange={(event) => updateGoal(index, event.target.value)}
                 aria-label={`Personal goal ${index + 1}`}

@@ -13,7 +13,7 @@ import { activityDefinitions } from "@/config/activity-definitions";
 import type { ActivityKey, MeasurementType } from "@/types/activity";
 import type { ActivitySchedule, SettingsSnapshot } from "@/types/settings";
 import { isSupabaseAuthorityConfigured } from "@/lib/supabase/env";
-import { activateActivityAction, activateBookaholicAction, deactivateActivityAction, updateActivityAction } from "./actions";
+import { activateActivityAction, activateBookaholicAction, deactivateActivityAction, saveWeeklyRemindersAction, updateActivityAction } from "./actions";
 
 export default async function SettingsPage() {
   const state = await getCurrentEvolveState();
@@ -32,6 +32,7 @@ export default async function SettingsPage() {
         activateBookaholicAction={isSupabaseAuthorityConfigured() ? activateBookaholicAction : undefined}
         deactivateActivityAction={isSupabaseAuthorityConfigured() ? deactivateActivityAction : undefined}
         updateActivityAction={isSupabaseAuthorityConfigured() ? updateActivityAction : undefined}
+        saveWeeklyRemindersAction={isSupabaseAuthorityConfigured() ? saveWeeklyRemindersAction : undefined}
       />
       <PageHeader
         eyebrow="Commitments"

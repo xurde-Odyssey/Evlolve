@@ -25,6 +25,7 @@ import {
 import type { ActivityKey, MeasurementType } from "@/types/activity";
 import type { ActivityConfiguration } from "@/types/settings";
 import type { Book } from "@/types/book";
+import type { WeeklyReminder } from "@/types/weekly-reminder";
 import type { Weekday } from "@/application/evolve/types";
 import { getLocalDateKey } from "@/application/evolve/time-policy";
 import { evolveEnginePolicyRegistry } from "@/domain/evolve-engine/simulation/policy-registry";
@@ -65,6 +66,8 @@ export type ProfileUpdateInput = {
   weightKg?: number;
   goals?: string[];
 };
+
+export type WeeklyReminderInput = Pick<WeeklyReminder, "id" | "title" | "enabled">;
 
 export async function logActivityAuthoritatively(
   input: ServerActivityLogInput,
@@ -327,6 +330,39 @@ export async function completeWeeklyReminderAuthoritatively(
 ): Promise<EvolveServerActionResult<ServerCommandResponse>> {
   return mutateState((memory) => {
     completeWeeklyReminder(memory, reminderId, completedAt);
+  });
+}
+
+export async function saveWeeklyRemindersAuthoritatively(
+  reminders: WeeklyReminderInput[],
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  return mutateState((memory) => {
+    const state = memory.getState();
+    const activeCount = reminders.filter((reminder) => reminder.enabled).length;
+
+    if (reminders.length > 3 || activeCount > 3) {
+      throw new Error("Weekly reminder limit exceeded.");
+    }
+
+    const existingById = new Map(state.weeklyReminders.map((reminder) => [reminder.id, reminder]));
+    const nextReminders = reminders.map((input, index) => {
+      const title = input.title.trim();
+      if (!title) throw new Error("Reminder name is required.");
+
+      const existing = existingById.get(input.id);
+      return existing
+        ? { ...existing, title, enabled: input.enabled }
+        : {
+            id: input.id || `weekly-reminder:${state.userId}:${index + 1}`,
+            title,
+            enabled: input.enabled,
+            completed: false,
+            createdAt: state.now,
+            completedAt: null,
+          };
+    });
+
+    memory.replaceState({ ...state, weeklyReminders: nextReminders });
   });
 }
 

@@ -20,7 +20,11 @@ export default async function DashboardPage() {
           <DashboardIdentity character={dashboard.character} />
           <ConsistencyOverview consistency={dashboard.consistency} />
         </div>
-        <CharacterAttributes attributes={dashboard.attributes} />
+        <CharacterAttributes
+          attributes={dashboard.attributes}
+          now={dashboard.now}
+          timezone={dashboard.timePolicy.timezone}
+        />
       </div>
       <TodayExecution
         execution={dashboard.dailyExecution}
@@ -34,6 +38,7 @@ export default async function DashboardPage() {
       />
       <DailyQuests
         evidence={dashboard.evidence}
+        weeklyReminders={dashboard.weeklyReminders.reminders}
         quests={dashboard.dailyQuests}
         weeklyRequirements={dashboard.weeklyRequirements}
         now={dashboard.now}

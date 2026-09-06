@@ -25,7 +25,7 @@ describe("Phase 3.8 application engine integration", () => {
     assert.equal(quests.some((quest) => quest.title === "Hardcoded Quest"), false);
   });
 
-  it("derives times-per-week commitments on deterministic Sunday-Saturday days", () => {
+  it("treats times-per-week commitments as a flexible weekly quota", () => {
     const state = createDemoEvolveState();
     state.now = "2026-08-30T09:00:00.000Z";
     const baseCommitment = state.commitments[0];
@@ -43,7 +43,8 @@ describe("Phase 3.8 application engine integration", () => {
     assert.equal(getDailyQuestViewModel(state)[0]?.id.endsWith(":2026-08-30"), true);
 
     state.now = "2026-08-31T09:00:00.000Z";
-    assert.equal(getDailyQuestViewModel(state).length, 0);
+    assert.equal(getDailyQuestViewModel(state).length, 1);
+    assert.equal(getDailyQuestViewModel(state)[0]?.id.endsWith(":2026-08-31"), true);
 
     state.now = "2026-09-01T09:00:00.000Z";
     assert.equal(getDailyQuestViewModel(state).length, 1);

@@ -362,9 +362,10 @@ export function getProgressSnapshotAttributes(
       weekRequirements.some((requirement) => requirement.id === `requirement:${item.commitmentId}:${item.scheduledFor}`),
     );
     const actual = weeklyEvidence.reduce((total, item) => total + (item.actualValue ?? 0), 0);
-    const target = weekRequirements
-      .filter((requirement) => requirement.commitmentId === commitment.id)
-      .reduce((total, requirement) => total + requirement.targetValue, 0);
+    const commitmentRequirements = weekRequirements.filter((requirement) => requirement.commitmentId === commitment.id);
+    const target = commitmentRequirements.length > 0
+      ? commitmentRequirements[0]!.targetValue * (commitmentRequirements[0]!.weeklyQuota ?? commitmentRequirements.length)
+      : 0;
     const stateForActivity = projection.activityStates.find((item) => item.activityId === commitment.activityKey);
 
     return {

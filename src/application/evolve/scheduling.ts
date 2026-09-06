@@ -30,6 +30,9 @@ export function getScheduledRequirementsForDate(
       unit: commitment.unit,
       measurementType: commitment.measurementType,
       exclusionState: exclusionForCommitment(commitment, dateKey),
+      weeklyQuota: commitment.schedule.type === "times_per_week"
+        ? normalizedWeeklyQuota(commitment.schedule.timesPerWeek)
+        : undefined,
     }));
 }
 
@@ -82,7 +85,7 @@ export function isCommitmentScheduledOn(
 
   if (commitment.schedule.type === "daily") return true;
   if (commitment.schedule.type === "times_per_week") {
-    return timesPerWeekWeekdays(commitment.schedule.timesPerWeek).includes(weekday);
+    return true;
   }
   if (commitment.schedule.type === "weekday") {
     return !["SUNDAY", "SATURDAY"].includes(weekday);
@@ -91,22 +94,8 @@ export function isCommitmentScheduledOn(
   return commitment.schedule.weekdays.includes(weekday);
 }
 
-/** Spread weekly sessions across the Sunday-Saturday reporting week. */
-function timesPerWeekWeekdays(timesPerWeek: number): Weekday[] {
-  const count = Math.max(1, Math.min(7, Math.floor(timesPerWeek)));
-  const weekdays: Weekday[] = [
-    "SUNDAY",
-    "MONDAY",
-    "TUESDAY",
-    "WEDNESDAY",
-    "THURSDAY",
-    "FRIDAY",
-    "SATURDAY",
-  ];
-
-  return Array.from({ length: count }, (_, index) =>
-    weekdays[Math.floor((index * weekdays.length) / count)]!,
-  );
+function normalizedWeeklyQuota(timesPerWeek: number) {
+  return Math.max(1, Math.min(7, Math.floor(timesPerWeek)));
 }
 
 export function deadlineStateForRequirement(

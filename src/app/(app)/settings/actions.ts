@@ -7,6 +7,8 @@ import {
   type BookaholicActivationInput,
   deactivateConfiguredActivityAuthoritatively,
   updateConfiguredActivityAuthoritatively,
+  saveWeeklyRemindersAuthoritatively,
+  type WeeklyReminderInput,
   type ServerCommandResponse,
 } from "@/application/evolve/server/commands";
 import type { EvolveServerActionResult } from "@/application/evolve/server/errors";
@@ -52,6 +54,19 @@ export async function updateActivityAction(
   if (result.ok) {
     revalidatePath("/settings");
     revalidatePath("/activities");
+  }
+  return result;
+}
+
+export async function saveWeeklyRemindersAction(
+  reminders: WeeklyReminderInput[],
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  const result = await saveWeeklyRemindersAuthoritatively(reminders);
+  if (result.ok) {
+    revalidatePath("/settings");
+    revalidatePath("/activities");
+    revalidatePath("/quests");
+    revalidatePath("/dashboard");
   }
   return result;
 }

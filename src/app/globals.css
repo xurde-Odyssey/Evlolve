@@ -224,18 +224,44 @@ select {
   animation: panel-enter var(--motion-duration-panel) var(--motion-ease) both;
 }
 
+.daily-principle-paper {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: var(--surface);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 2rem,
+    color-mix(in srgb, var(--foreground) 7%, transparent) 2rem,
+    color-mix(in srgb, var(--foreground) 7%, transparent) 2.0625rem
+  );
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.daily-principle-paper::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--accent-pro);
+  content: "";
+}
+
 .route-page-enter {
   animation: route-page-enter var(--motion-duration-panel) var(--motion-ease) both;
 }
 
 .route-progress {
   position: fixed;
-  inset: 0 0 auto;
+  top: 0;
+  left: 33%;
   z-index: 100;
+  width: 34%;
   height: 2px;
   pointer-events: none;
   opacity: 0;
-  transform-origin: left;
+  transform-origin: center;
   background: var(--accent-pro);
   box-shadow: 0 1px 10px color-mix(in srgb, var(--accent-pro) 35%, transparent);
   transition: opacity var(--motion-duration-fast) var(--motion-ease);
@@ -258,11 +284,70 @@ select {
 .app-loading-line {
   position: absolute;
   top: 0;
-  left: 0;
+  left: 32.5%;
   width: 35%;
   height: 2px;
   background: var(--accent-pro);
+  transform-origin: center;
   animation: route-progress 1.2s var(--motion-ease) infinite;
+}
+
+.settings-workspace {
+  --settings-section-gap: 1.75rem;
+}
+
+.settings-workspace > * {
+  min-width: 0;
+}
+
+.settings-panel,
+.settings-workspace .settings-overview {
+  background: color-mix(in srgb, var(--surface) 92%, var(--background));
+}
+
+.settings-rail > section {
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--primary) 5%, transparent);
+}
+
+.settings-activity-item:hover {
+  border-color: color-mix(in srgb, var(--accent-pro) 28%, var(--border));
+}
+
+.settings-primary-action {
+  min-height: 2.75rem;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.settings-primary-action:hover {
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--primary) 18%, transparent);
+  transform: translateY(-1px);
+}
+
+.settings-activity-item select,
+.settings-activity-item input,
+.settings-workspace select,
+.settings-workspace input {
+  transition: border-color var(--motion-duration-fast) var(--motion-ease),
+    box-shadow var(--motion-duration-fast) var(--motion-ease),
+    background-color var(--motion-duration-fast) var(--motion-ease);
+}
+
+.settings-workspace select:focus-visible,
+.settings-workspace input:focus-visible,
+.settings-workspace button:focus-visible {
+  outline: none;
+  border-color: var(--accent-pro);
+  box-shadow: var(--shadow-focus);
+}
+
+@media (max-width: 767px) {
+  .settings-workspace {
+    --settings-section-gap: 1.25rem;
+  }
+
+  .settings-workspace .settings-activity-item {
+    padding: 1rem;
+  }
 }
 
 .app-loading-dot {

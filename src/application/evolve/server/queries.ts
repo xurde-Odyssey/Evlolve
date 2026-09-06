@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createEmptyEvolveState, getDashboardViewModel, type EvolveLocalState } from "@/application/evolve";
+import { defaultUserTimePolicy } from "@/application/evolve/time-policy";
 import { SupabaseEvolveStateRepository } from "@/infrastructure/supabase/evolve-state-repository";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { isSupabaseAuthorityConfigured } from "@/lib/supabase/env";
@@ -24,9 +25,13 @@ export async function getCurrentEvolveState(): Promise<EvolveLocalState> {
   }
 
   const repository = new SupabaseEvolveStateRepository(createSupabaseServiceClient());
+  const configuredTimezone = stringMetadata(user.user_metadata.timezone);
+  const timezone = configuredTimezone === "UTC" || !configuredTimezone
+    ? defaultUserTimePolicy.timezone
+    : configuredTimezone;
   await repository.ensureProfile(
     user.id,
-    stringMetadata(user.user_metadata.timezone) ?? "UTC",
+    timezone,
   );
 
   return repository.loadState(user.id);

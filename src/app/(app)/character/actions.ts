@@ -11,7 +11,10 @@ import type { EvolveServerActionResult } from "@/application/evolve/server/error
 
 export async function updateProfileAction(input: ProfileUpdateInput): Promise<EvolveServerActionResult<ServerCommandResponse>> {
   const result = await updateProfileAuthoritatively(input);
-  if (result.ok) revalidatePath("/character");
+  if (result.ok) {
+    revalidatePath("/character");
+    revalidatePath("/dashboard");
+  }
   return result;
 }
 

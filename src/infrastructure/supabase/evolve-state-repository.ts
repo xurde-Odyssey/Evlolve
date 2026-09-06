@@ -7,6 +7,7 @@ import {
   type GrowthCommitment,
 } from "@/application/evolve";
 import { getScheduledRequirementsForCurrentWeek } from "@/application/evolve/scheduling";
+import { defaultUserTimePolicy } from "@/application/evolve/time-policy";
 import { evolveEnginePolicyRegistry } from "@/domain/evolve-engine/simulation/policy-registry";
 import type {
   AchievementAward,
@@ -71,7 +72,27 @@ type CapacityStateRow = {
 export class SupabaseEvolveStateRepository {
   constructor(private readonly client: SupabaseClient) {}
 
-  async ensureProfile(userId: string, timezone = "UTC") {
+  async ensureProfile(userId: string, timezone = defaultUserTimePolicy.timezone) {
+    const existing = await this.client
+      .from("profiles")
+      .select("timezone")
+      .eq("id", userId)
+      .maybeSingle();
+
+    throwIfError(existing.error);
+
+    if (existing.data?.timezone === "UTC" && timezone !== "UTC") {
+      const migrated = await this.client
+        .from("profiles")
+        .update({ timezone })
+        .eq("id", userId)
+        .select("timezone")
+        .single();
+
+      throwIfError(migrated.error);
+      return (migrated.data as ProfileRow).timezone;
+    }
+
     const response = await this.client
       .from("profiles")
       .upsert(
@@ -94,7 +115,7 @@ export class SupabaseEvolveStateRepository {
     const state = createEmptyEvolveState({
       userId,
       now,
-      timezone: profile?.timezone ?? "UTC",
+      timezone: profile?.timezone ?? defaultUserTimePolicy.timezone,
     });
 
     const [
@@ -211,6 +232,20 @@ export class SupabaseEvolveStateRepository {
     const activityIdMap = new Map(
       ((activityResponse.data ?? []) as DomainIdRow[]).map((row) => [row.domain_id, row.id]),
     );
+
+    const reminderDelete = this.client
+      .from("weekly_reminders")
+      .delete()
+      .eq("user_id", userId);
+    if (state.weeklyReminders.length > 0) {
+      reminderDelete.not(
+        "domain_id",
+        "in",
+        `(${state.weeklyReminders.map((reminder) => `'${reminder.id.replaceAll("'", "''")}'`).join(",")})`,
+      );
+    }
+    const reminderDeleteResponse = await reminderDelete;
+    throwIfError(reminderDeleteResponse.error);
 
     await Promise.all([
       this.upsertPayloadRows(

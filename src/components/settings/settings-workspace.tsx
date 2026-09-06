@@ -4,10 +4,12 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bell,
+  Ban,
   BookOpen,
   CheckCircle2,
   Check,
   Circle,
+  ChevronDown,
   LockKeyhole,
   Moon,
   Plus,
@@ -15,6 +17,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Trash2,
+  UsersRound,
 } from "lucide-react";
 import { activityDefinitions } from "@/config/activity-definitions";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +45,7 @@ import type { WeeklyReminder } from "@/types/weekly-reminder";
 import type {
   BookaholicActivationInput,
   ServerCommandResponse,
+  WeeklyReminderInput,
 } from "@/application/evolve/server/commands";
 import type { EvolveServerActionResult } from "@/application/evolve/server/errors";
 
@@ -58,6 +62,9 @@ type SettingsWorkspaceProps = {
   ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
   updateActivityAction?: (
     configuration: ActivityConfiguration,
+  ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  saveWeeklyRemindersAction?: (
+    reminders: WeeklyReminderInput[],
   ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
 };
 
@@ -127,6 +134,7 @@ export function SettingsWorkspace({
   activateActivityAction,
   activateBookaholicAction,
   deactivateActivityAction,
+  saveWeeklyRemindersAction,
   updateActivityAction,
 }: SettingsWorkspaceProps) {
   const router = useRouter();
@@ -284,16 +292,28 @@ export function SettingsWorkspace({
           return;
         }
       }
-      router.refresh();
-      setErrorMessage(null);
-      setStatusMessage("Activity settings saved.");
-      setIsSaving(false);
-      return;
+    }
+
+    if (saveWeeklyRemindersAction) {
+      const result = await saveWeeklyRemindersAction(
+        weeklyReminders.map(({ id, title, enabled }) => ({ id, title, enabled })),
+      );
+      if (!result.ok) {
+        setIsSaving(false);
+        setStatusMessage(null);
+        setErrorMessage(result.message);
+        return;
+      }
     }
 
     setErrorMessage(null);
-    setStatusMessage("Settings prepared for this development workspace.");
+    setStatusMessage(
+      saveWeeklyRemindersAction || updateActivityAction
+        ? "Settings saved."
+        : "Settings prepared for this development workspace.",
+    );
     setIsSaving(false);
+    router.refresh();
   }
 
   function handleCustomSubmit(event: FormEvent<HTMLFormElement>) {
@@ -317,11 +337,11 @@ export function SettingsWorkspace({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="settings-workspace space-y-8">
       {(statusMessage || errorMessage) && (
         <p
           className={cn(
-            "rounded-md border px-4 py-3 text-sm font-semibold",
+            "motion-panel rounded-lg border px-4 py-3 text-sm font-semibold shadow-[var(--shadow-soft)]",
             errorMessage
               ? "border-[var(--border)] bg-[var(--warning-subtle)] text-[var(--foreground)]"
               : "border-[var(--border)] bg-[var(--accent-subtle)] text-[var(--foreground)]",
@@ -338,18 +358,24 @@ export function SettingsWorkspace({
         snapshot={snapshot}
       />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
-        <ActivityConfigurationPanel
-          activities={activities}
-          capacity={snapshot.commitmentCapacity}
-          activeCommitments={activeCommitments}
-          measurementOptionMap={measurementOptionMap}
-          onToggleActivity={toggleActivity}
-          onMeasurementChange={handleMeasurementChange}
-          onUpdateActivity={updateActivity}
-        />
+      <div className="settings-primary-grid grid items-start gap-7 xl:grid-cols-[minmax(0,1.18fr)_minmax(20rem,0.82fr)]">
+        <div className="grid min-w-0 gap-5">
+          <ActivityConfigurationPanel
+            activities={activities}
+            capacity={snapshot.commitmentCapacity}
+            activeCommitments={activeCommitments}
+            measurementOptionMap={measurementOptionMap}
+            onToggleActivity={toggleActivity}
+            onMeasurementChange={handleMeasurementChange}
+            onUpdateActivity={updateActivity}
+          />
+          <NotificationsPanel
+            notifications={notifications}
+            onChange={setNotifications}
+          />
+        </div>
 
-        <div className="space-y-6">
+        <div className="settings-rail grid gap-5">
           <InactiveModePanel snapshot={snapshot} />
           <StreakProtectionPanel
             activities={activities}
@@ -357,15 +383,13 @@ export function SettingsWorkspace({
           />
           <SystemManagedPanel snapshot={snapshot} />
           <OfflineState />
+          <BehaviorBoundariesPanel />
+          <CustomActivityPanel
+            customActivity={customActivity}
+            onChange={setCustomActivity}
+            onSubmit={handleCustomSubmit}
+          />
         </div>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-        <CustomActivityPanel
-          customActivity={customActivity}
-          onChange={setCustomActivity}
-          onSubmit={handleCustomSubmit}
-        />
       </div>
 
       {bookaholicActivationOpen ? (
@@ -386,7 +410,7 @@ export function SettingsWorkspace({
         maxActive={snapshot.weeklyReminders.maxActive}
         newReminderTitle={newReminderTitle}
         reminders={weeklyReminders}
-        onAddReminder={() => {
+        onAddReminder={async () => {
           const title = newReminderTitle.trim();
 
           if (!title) {
@@ -399,20 +423,38 @@ export function SettingsWorkspace({
             (reminder) => reminder.enabled,
           ).length;
 
+          const nextReminder = {
+            id: `weekly-reminder-${Date.now()}`,
+            title,
+            enabled: activeCount < snapshot.weeklyReminders.maxActive,
+            completed: false,
+            createdAt: new Date().toISOString(),
+            completedAt: null,
+          } satisfies WeeklyReminder;
+          const nextReminders = [
+            ...weeklyReminders,
+            nextReminder,
+          ];
           setErrorMessage(null);
-          setStatusMessage("Weekly Reminder added locally for this demo.");
-          setWeeklyReminders((currentReminders) => [
-            ...currentReminders,
-            {
-              id: `weekly-reminder-${currentReminders.length + 1}`,
-              title,
-              enabled: activeCount < snapshot.weeklyReminders.maxActive,
-              completed: false,
-              createdAt: "2026-08-28",
-              completedAt: null,
-            },
-          ]);
+          setWeeklyReminders(nextReminders);
           setNewReminderTitle("");
+          if (saveWeeklyRemindersAction) {
+            const result = await saveWeeklyRemindersAction(
+              nextReminders.map(({ id, title: reminderTitle, enabled }) => ({
+                id,
+                title: reminderTitle,
+                enabled,
+              })),
+            );
+            if (!result.ok) {
+              setWeeklyReminders(weeklyReminders);
+              setNewReminderTitle(title);
+              setStatusMessage(null);
+              setErrorMessage(result.message);
+              return;
+            }
+          }
+          setStatusMessage("Reminder saved.");
         }}
         onNewReminderTitleChange={setNewReminderTitle}
         onRemoveReminder={(reminderId) => {
@@ -450,11 +492,6 @@ export function SettingsWorkspace({
         }}
       />
 
-      <NotificationsPanel
-        notifications={notifications}
-        onChange={setNotifications}
-      />
-
       <div className="flex justify-end">
         <Button className="w-full gap-2 sm:w-auto" onClick={saveSettings} disabled={isSaving}>
           {isSaving ? <span className="button-spinner" aria-hidden="true" /> : null}
@@ -462,6 +499,202 @@ export function SettingsWorkspace({
         </Button>
       </div>
     </div>
+  );
+}
+
+function BehaviorBoundariesPanel() {
+  const [openForm, setOpenForm] = useState<"social" | "boundary" | null>(null);
+  const [socialType, setSocialType] = useState("Social outing");
+  const [socialNotes, setSocialNotes] = useState("");
+  const [boundaryName, setBoundaryName] = useState("");
+  const [boundaryMode, setBoundaryMode] = useState("ZERO");
+  const [boundaryLimit, setBoundaryLimit] = useState("1");
+  const [savedMessage, setSavedMessage] = useState<string | null>(null);
+
+  function showSavedMessage(message: string) {
+    setSavedMessage(message);
+    setOpenForm(null);
+  }
+
+  return (
+    <Card className="settings-panel space-y-6">
+      <div className="flex items-start gap-3">
+        <div className="grid size-9 shrink-0 place-items-center rounded-md border border-[var(--border)] bg-[var(--accent-subtle)] text-[var(--accent)]">
+          <ShieldCheck
+            aria-hidden="true"
+            className="size-4"
+            focusable="false"
+            strokeWidth={1.9}
+          />
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">
+            Behavior &amp; boundaries
+          </p>
+          <p className="mt-2 text-sm leading-6 text-[var(--foreground-muted)]">
+            Keep lifestyle context and personal limits separate from your growth commitments.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-3">
+        <div className="rounded-md border border-[var(--border)] bg-[var(--background)] p-3">
+          <div className="flex items-center gap-3">
+          <div className="grid size-9 shrink-0 place-items-center rounded-md bg-[var(--accent-subtle)] text-[var(--accent)]">
+            <UsersRound
+              aria-hidden="true"
+              className="size-4"
+              focusable="false"
+              strokeWidth={1.9}
+            />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[var(--foreground)]">Social outings</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--foreground-muted)]">
+              Record context only when it helps explain your rhythm.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="ml-auto inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            aria-label="Add social outing"
+            aria-expanded={openForm === "social"}
+            onClick={() => {
+              setSavedMessage(null);
+              setOpenForm(openForm === "social" ? null : "social");
+            }}
+          >
+            {openForm === "social" ? <ChevronDown className="size-4" aria-hidden="true" /> : <Plus className="size-4" aria-hidden="true" />}
+          </button>
+          </div>
+          {openForm === "social" ? (
+            <form
+              className="mt-4 grid gap-3 border-t border-[var(--border)] pt-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                showSavedMessage(`${socialType} added to your behavior context.`);
+                setSocialNotes("");
+              }}
+            >
+              <label className="grid gap-1.5 text-xs font-semibold text-[var(--foreground-muted)]">
+                What happened?
+                <select
+                  value={socialType}
+                  onChange={(event) => setSocialType(event.target.value)}
+                  className="min-h-11 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
+                >
+                  <option>Social outing</option>
+                  <option>Late night</option>
+                  <option>Recreation</option>
+                </select>
+              </label>
+              <label className="grid gap-1.5 text-xs font-semibold text-[var(--foreground-muted)]">
+                Note <span className="font-normal">(optional)</span>
+                <input
+                  value={socialNotes}
+                  onChange={(event) => setSocialNotes(event.target.value)}
+                  placeholder="Add useful context"
+                  className="min-h-11 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--foreground)] outline-none placeholder:text-[var(--foreground-muted)] focus:border-[var(--accent)]"
+                />
+              </label>
+              <div className="flex justify-end">
+                <Button type="submit" className="min-h-10 px-3 text-xs">
+                  Record context
+                </Button>
+              </div>
+            </form>
+          ) : null}
+        </div>
+
+        <div className="rounded-md border border-[var(--border)] bg-[var(--background)] p-3">
+          <div className="flex items-center gap-3">
+          <div className="grid size-9 shrink-0 place-items-center rounded-md bg-[var(--accent-subtle)] text-[var(--accent)]">
+            <Ban
+              aria-hidden="true"
+              className="size-4"
+              focusable="false"
+              strokeWidth={1.9}
+            />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[var(--foreground)]">Quit or reduce something</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--foreground-muted)]">
+              Set a personal boundary such as a zero limit or weekly cap.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="ml-auto inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            aria-label="Add personal boundary"
+            aria-expanded={openForm === "boundary"}
+            onClick={() => {
+              setSavedMessage(null);
+              setOpenForm(openForm === "boundary" ? null : "boundary");
+            }}
+          >
+            {openForm === "boundary" ? <ChevronDown className="size-4" aria-hidden="true" /> : <Plus className="size-4" aria-hidden="true" />}
+          </button>
+          </div>
+          {openForm === "boundary" ? (
+            <form
+              className="mt-4 grid gap-3 border-t border-[var(--border)] pt-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!boundaryName.trim()) return;
+                showSavedMessage(`${boundaryName.trim()} boundary added.`);
+              }}
+            >
+              <label className="grid gap-1.5 text-xs font-semibold text-[var(--foreground-muted)]">
+                What do you want to change?
+                <input
+                  required
+                  value={boundaryName}
+                  onChange={(event) => setBoundaryName(event.target.value)}
+                  placeholder="For example, alcohol or gaming"
+                  className="min-h-11 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--foreground)] outline-none placeholder:text-[var(--foreground-muted)] focus:border-[var(--accent)]"
+                />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1.5 text-xs font-semibold text-[var(--foreground-muted)]">
+                  Boundary
+                  <select
+                    value={boundaryMode}
+                    onChange={(event) => setBoundaryMode(event.target.value)}
+                    className="min-h-11 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
+                  >
+                    <option value="ZERO">Quit completely</option>
+                    <option value="FREQUENCY_CAP">Limit per week</option>
+                    <option value="QUANTITY_CAP">Limit quantity</option>
+                  </select>
+                </label>
+                {boundaryMode !== "ZERO" ? (
+                  <label className="grid gap-1.5 text-xs font-semibold text-[var(--foreground-muted)]">
+                    Allowed amount
+                    <input
+                      min="1"
+                      type="number"
+                      value={boundaryLimit}
+                      onChange={(event) => setBoundaryLimit(event.target.value)}
+                      className="min-h-11 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
+                    />
+                  </label>
+                ) : null}
+              </div>
+              <div className="flex justify-end">
+                <Button type="submit" className="min-h-10 px-3 text-xs">
+                  Set boundary
+                </Button>
+              </div>
+            </form>
+          ) : null}
+        </div>
+      </div>
+      {savedMessage ? (
+        <p className="rounded-md border border-[var(--border)] bg-[var(--accent-subtle)] px-3 py-2 text-xs font-semibold text-[var(--foreground)]" role="status">
+          {savedMessage}
+        </p>
+      ) : null}
+    </Card>
   );
 }
 
@@ -478,7 +711,7 @@ function WeeklyRemindersPanel({
   reminders: WeeklyReminder[];
   maxActive: number;
   newReminderTitle: string;
-  onAddReminder: () => void;
+  onAddReminder: () => void | Promise<void>;
   onNewReminderTitleChange: (title: string) => void;
   onRemoveReminder: (reminderId: string) => void;
   onRenameReminder: (reminderId: string, title: string) => void;
@@ -488,7 +721,7 @@ function WeeklyRemindersPanel({
   const activeLimitReached = activeCount >= maxActive;
 
   return (
-    <Card className="space-y-5">
+    <Card className="settings-panel space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <Bell
@@ -645,7 +878,7 @@ function SettingsOverview({
   availableSlots: number;
 }) {
   return (
-    <Card className="space-y-5">
+    <Card className="settings-overview space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">
@@ -699,7 +932,7 @@ function ActivityConfigurationPanel({
   ) => void;
 }) {
   return (
-    <Card className="space-y-5">
+    <Card className="settings-panel space-y-6">
       <div className="flex items-start gap-3">
         <SlidersHorizontal
           aria-hidden="true"
@@ -724,7 +957,7 @@ function ActivityConfigurationPanel({
           return (
             <section
               key={activity.activityKey}
-              className="space-y-4 rounded-md border border-[var(--border)] bg-[var(--background)] p-4"
+              className="settings-activity-item space-y-5 rounded-lg border border-[var(--border)] bg-[var(--background)] p-5 transition-colors"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
@@ -747,10 +980,8 @@ function ActivityConfigurationPanel({
                 <Button
                   variant="ghost"
                   className={cn(
-                    "gap-2 border",
-                    activity.active
-                      ? "border-[var(--accent-pro)]/35 text-[var(--accent-pro)] hover:border-[var(--accent-pro)] hover:bg-[var(--accent-subtle)]"
-                      : "border-[var(--success)]/35 text-[var(--success)] hover:border-[var(--success)] hover:bg-[var(--success-subtle)]",
+                    "min-h-10 gap-2 rounded-full border px-4 text-[var(--accent-pro)] transition-all",
+                    "border-[var(--accent-pro)]/35 hover:border-[var(--accent-pro)] hover:bg-[var(--accent-subtle)] hover:text-[var(--accent-pro)]",
                   )}
                   disabled={!activity.active && activeCommitments >= capacity}
                   onClick={() =>
@@ -1219,7 +1450,17 @@ function CustomActivityPanel({
           XP, penalties, difficulty, and level contribution stay managed by Evolve.
         </p>
 
-        <Button className="w-full sm:w-auto" type="submit" variant="secondary">
+        <Button
+          className="settings-primary-action w-full gap-2 sm:w-auto"
+          type="submit"
+          variant="primary"
+        >
+          <Plus
+            aria-hidden="true"
+            className="size-4"
+            focusable="false"
+            strokeWidth={2}
+          />
           Prepare Custom Activity
         </Button>
       </form>

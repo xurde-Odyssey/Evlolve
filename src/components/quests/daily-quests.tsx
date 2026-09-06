@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, Circle, ClipboardPenLine } from "lucide-react";
+import { AlertCircle, Bell, CheckCircle2, Circle, ClipboardPenLine } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { SystemState } from "@/components/ui/system-state";
@@ -11,9 +11,11 @@ import type { DailyQuest, QuestStatus } from "@/types/quest";
 import type { ScheduledRequirement } from "@/application/evolve/types";
 import type { ActivityExecutionEvidence } from "@/domain/evolve-engine";
 import type { UserTimePolicy } from "@/application/evolve/time-policy";
+import type { WeeklyReminder } from "@/types/weekly-reminder";
 
 type DailyQuestsProps = {
   evidence?: ActivityExecutionEvidence[];
+  weeklyReminders?: WeeklyReminder[];
   emptyReason?: "not_configured" | "rest_day";
   quests: DailyQuest[];
   weeklyRequirements?: ScheduledRequirement[];
@@ -23,6 +25,7 @@ type DailyQuestsProps = {
 
 export function DailyQuests({
   evidence = [],
+  weeklyReminders = [],
   emptyReason = "not_configured",
   quests,
   weeklyRequirements = [],
@@ -51,25 +54,24 @@ export function DailyQuests({
         <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
           <Link
             href="/activities"
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-[var(--accent-pro)]/30 bg-[var(--accent-subtle)] px-3 py-2 text-sm font-semibold text-[var(--accent-pro)] transition hover:border-[var(--accent-pro)] focus-visible:outline-offset-2"
+            aria-label={`Today's exercise, ${completedCount} of ${totalCount} completed`}
+            className="inline-flex min-h-10 items-center justify-between gap-4 rounded-md border border-[var(--accent-pro)]/30 bg-[var(--accent-subtle)] px-3 py-2 text-sm font-semibold text-[var(--accent-pro)] transition hover:border-[var(--accent-pro)] focus-visible:outline-offset-2"
           >
-            <ClipboardPenLine aria-hidden="true" className="size-4" strokeWidth={1.9} />
-            Today&apos;s exercise
-          </Link>
-          <div className="rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2">
-            <p className="numeric font-mono text-sm font-semibold text-[var(--foreground)]">
+            <span className="inline-flex items-center gap-2">
+              <ClipboardPenLine aria-hidden="true" className="size-4" strokeWidth={1.9} />
+              Today&apos;s exercise
+            </span>
+            <span className="numeric border-l border-[var(--accent-pro)]/25 pl-4 font-mono text-sm font-semibold text-[var(--foreground)]" title={`${completedCount} of ${totalCount} daily quests completed`}>
               {completedCount} / {totalCount}
-            </p>
-            <p className="mt-1 text-xs font-semibold uppercase text-[var(--foreground-muted)]">
-              completed
-            </p>
-          </div>
+            </span>
+          </Link>
         </div>
       </div>
 
       {weeklyRequirements.length > 0 && now && timePolicy ? (
         <WeeklyActivityCalendar
           evidence={evidence}
+          weeklyReminders={weeklyReminders}
           now={now}
           timePolicy={timePolicy}
           weeklyRequirements={weeklyRequirements}
@@ -162,17 +164,22 @@ export function DailyQuests({
           }
         />
       )}
+      {weeklyRequirements.length === 0 ? (
+        <WeeklyReminderSummary reminders={weeklyReminders} />
+      ) : null}
     </Card>
   );
 }
 
 function WeeklyActivityCalendar({
   evidence,
+  weeklyReminders,
   now,
   timePolicy,
   weeklyRequirements,
 }: {
   evidence: ActivityExecutionEvidence[];
+  weeklyReminders: WeeklyReminder[];
   now: string;
   timePolicy: UserTimePolicy;
   weeklyRequirements: ScheduledRequirement[];
@@ -181,14 +188,13 @@ function WeeklyActivityCalendar({
   const today = getLocalDateKey(now, timePolicy.timezone);
   const rows = [...new Map(weeklyRequirements.map((requirement) => [requirement.commitmentId, requirement])).values()];
   const completedCells = rows.reduce(
-    (total, row) => total + days.filter((day) => {
+    (total, row) => Math.min(row.weeklyQuota ?? days.length, total + days.filter((day) => {
       const requirement = requirementForDay(row.commitmentId, day, weeklyRequirements);
       return requirement ? isDayComplete(requirement, day, evidence, now) : false;
-    }).length,
+    }).length),
     0,
   );
-  const scheduledCells = weeklyRequirements.length;
-  const progress = scheduledCells > 0 ? (completedCells / scheduledCells) * 100 : 0;
+  const scheduledCells = rows.reduce((total, row) => total + (row.weeklyQuota ?? 1), 0);
   const todayRows = weeklyRequirements.filter((row) => row.scheduledDate === today);
 
   return (
@@ -261,13 +267,15 @@ function WeeklyActivityCalendar({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">This week</p>
-          <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">{formatPercent(progress)}% complete</p>
+        <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">{completedCells}/{scheduledCells} complete</p>
         </div>
         <div className="text-right">
           <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">Daily average</p>
-          <p className="mt-1 numeric font-mono text-sm font-semibold text-[var(--foreground)]">{formatPercent(completedCells / 7)}%</p>
+          <p className="mt-1 numeric font-mono text-sm font-semibold text-[var(--foreground)]">{formatPercent(completedCells / Math.max(scheduledCells, 1))}%</p>
         </div>
       </div>
+
+      <WeeklyReminderSummary reminders={weeklyReminders} />
 
       <div className="overflow-x-auto pb-1">
         <div className="min-w-[28rem]">
@@ -320,6 +328,28 @@ function WeeklyActivityCalendar({
 
       <p className="text-xs text-[var(--foreground-muted)]">Activity is recorded in Quick Log.</p>
     </div>
+  );
+}
+
+function WeeklyReminderSummary({ reminders }: { reminders: WeeklyReminder[] }) {
+  const visibleReminders = reminders.filter((reminder) => reminder.enabled);
+  if (visibleReminders.length === 0) return null;
+
+  return (
+    <section className="space-y-3 border-t border-[var(--border)] pt-4" aria-labelledby="weekly-reminders-summary">
+      <div className="flex items-center gap-2">
+        <Bell aria-hidden="true" className="size-4 text-[var(--foreground-muted)]" strokeWidth={1.9} />
+        <p id="weekly-reminders-summary" className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">Weekly reminders</p>
+      </div>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {visibleReminders.map((reminder) => (
+          <li key={reminder.id} className="flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm">
+            {reminder.completed ? <CheckCircle2 aria-hidden="true" className="size-4 text-[var(--accent-pro)]" /> : <Circle aria-hidden="true" className="size-4 text-[var(--foreground-muted)]" />}
+            <span className={cn("truncate font-semibold", reminder.completed ? "text-[var(--foreground-muted)]" : "text-[var(--foreground)]")}>{reminder.title}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
