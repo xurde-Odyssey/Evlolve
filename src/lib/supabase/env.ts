@@ -12,7 +12,10 @@ export function getSupabaseRuntimeEnv(): SupabaseRuntimeEnv {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     "";
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const useSupabase = process.env.EVOLVE_USE_SUPABASE === "true";
+  // Presence of the complete server configuration is the production switch.
+  // The legacy flag is still accepted for compatibility, but must not silently
+  // downgrade an authenticated deployment to local React state.
+  const useSupabase = process.env.EVOLVE_USE_SUPABASE !== "false";
 
   return {
     url,
