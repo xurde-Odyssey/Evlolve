@@ -24,6 +24,7 @@ import type { UserTimePolicy } from "./time-policy";
 
 export type CommitmentSchedule =
   | { type: "daily" }
+  | { type: "times_per_week"; timesPerWeek: number }
   | { type: "weekday" }
   | { type: "specific_weekdays"; weekdays: readonly Weekday[] };
 

@@ -25,6 +25,30 @@ describe("Phase 3.8 application engine integration", () => {
     assert.equal(quests.some((quest) => quest.title === "Hardcoded Quest"), false);
   });
 
+  it("derives times-per-week commitments on deterministic Sunday-Saturday days", () => {
+    const state = createDemoEvolveState();
+    state.now = "2026-08-30T09:00:00.000Z";
+    const baseCommitment = state.commitments[0];
+    assert.ok(baseCommitment);
+    state.commitments = [
+      {
+        ...baseCommitment,
+        id: "commitment-three-times",
+        title: "Three times weekly",
+        schedule: { type: "times_per_week", timesPerWeek: 3 },
+      },
+    ];
+
+    assert.equal(getDailyQuestViewModel(state).length, 1);
+    assert.equal(getDailyQuestViewModel(state)[0]?.id.endsWith(":2026-08-30"), true);
+
+    state.now = "2026-08-31T09:00:00.000Z";
+    assert.equal(getDailyQuestViewModel(state).length, 0);
+
+    state.now = "2026-09-01T09:00:00.000Z";
+    assert.equal(getDailyQuestViewModel(state).length, 1);
+  });
+
   it("logs before-deadline activity through one command with evidence and XP", () => {
     const app = createEvolveApplication(createDemoEvolveState());
     const result = app.logActivity({

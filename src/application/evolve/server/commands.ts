@@ -536,7 +536,12 @@ function scheduleFromConfiguration(
   configuration: ActivityConfiguration,
 ): GrowthCommitment["schedule"] {
   if (configuration.schedule.type === "daily") return { type: "daily" };
-  if (configuration.schedule.type === "times_per_week") return { type: "weekday" };
+  if (configuration.schedule.type === "times_per_week") {
+    return {
+      type: "times_per_week",
+      timesPerWeek: configuration.schedule.timesPerWeek ?? 1,
+    };
+  }
 
   return {
     type: "specific_weekdays",

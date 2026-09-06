@@ -920,8 +920,9 @@ function scheduleLabel(requirement: ScheduledRequirement, state: EvolveLocalStat
   return `${requirement.scheduledDate} by ${getProgressionDeadlineLabel(state.timePolicy)}`;
 }
 
-function scheduleLabelForCommitment(commitment: { schedule: { type: string; weekdays?: readonly string[] } }) {
+function scheduleLabelForCommitment(commitment: { schedule: { type: string; timesPerWeek?: number; weekdays?: readonly string[] } }) {
   if (commitment.schedule.type === "daily") return "Daily";
+  if (commitment.schedule.type === "times_per_week") return `${commitment.schedule.timesPerWeek ?? 0} times/week`;
   if (commitment.schedule.type === "weekday") return "Weekdays";
   return commitment.schedule.weekdays?.join(" / ") ?? "Scheduled";
 }

@@ -104,6 +104,7 @@ function createSettingsSnapshot(state: Awaited<ReturnType<typeof getCurrentEvolv
 function fromCommitmentSchedule(schedule: Awaited<ReturnType<typeof getCurrentEvolveState>>["commitments"][number]["schedule"] | undefined): ActivitySchedule | undefined {
   if (!schedule) return undefined;
   if (schedule.type === "daily") return { type: "daily" };
+  if (schedule.type === "times_per_week") return { type: "times_per_week", timesPerWeek: schedule.timesPerWeek };
   if (schedule.type === "weekday") return { type: "times_per_week", timesPerWeek: 5 };
   return { type: "selected_days", selectedDays: schedule.weekdays.map((day) => day.toLowerCase() as NonNullable<ActivitySchedule["selectedDays"]>[number]) };
 }
