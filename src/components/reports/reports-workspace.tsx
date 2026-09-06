@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BarChart3, BookOpen, Download, LineChart, LockKeyhole } from "lucide-react";
+import { BarChart3, BookOpen, CheckCircle2, Download, LineChart, LockKeyhole, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import {
   SystemState,
 } from "@/components/ui/system-state";
 import { cn } from "@/lib/utils/cn";
+import { formatPercent } from "@/lib/utils/format";
 import type { DataViewState } from "@/types/system-state";
 import type {
   ActivityReport,
@@ -175,7 +176,7 @@ function PerformanceOverview({ report }: { report: PeriodReport }) {
           value={
             report.overview.overallConsistencyPercent === null
               ? "Not enough data"
-              : `${report.overview.overallConsistencyPercent}%`
+              : `${formatPercent(report.overview.overallConsistencyPercent)}%`
           }
           numeric={report.overview.overallConsistencyPercent !== null}
         />
@@ -245,14 +246,17 @@ function ActivityTargetRow({ activity }: { activity: ActivityReport }) {
           </h3>
           <VarianceBadge metric={activity.primaryMetric} />
         </div>
-        <p className="mt-1 text-sm leading-6 text-[var(--foreground-muted)]">
-          {formatVarianceSentence(activity.primaryMetric)}
-        </p>
         {typeof activity.requiredSessions === "number" ? (
-          <p className="mt-1 text-sm text-[var(--foreground-muted)]">
-            {activity.completedSessions} of {activity.requiredSessions} required
-            sessions completed. Missed {activity.missedSessions}.
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-[var(--foreground-muted)]">
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--accent-subtle)] px-2 py-1 text-[var(--accent-pro)]">
+              <CheckCircle2 aria-hidden="true" className="size-3.5" />
+              {activity.completedSessions}/{activity.requiredSessions}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--surface-elevated)] px-2 py-1">
+              <XCircle aria-hidden="true" className="size-3.5" />
+              {activity.missedSessions} missed
+            </span>
+          </div>
         ) : null}
       </div>
 
@@ -348,7 +352,7 @@ function ConsistencySection({ report }: { report: PeriodReport }) {
           value={report.consistency.overallPercent}
           label="Overall consistency"
           ariaLabel="Overall consistency"
-          ariaValueText={`${report.consistency.overallPercent}%`}
+          ariaValueText={`${formatPercent(report.consistency.overallPercent)}%`}
         />
       )}
 
@@ -363,13 +367,13 @@ function ConsistencySection({ report }: { report: PeriodReport }) {
                 {item.activityLabel}
               </p>
               <p className="numeric font-mono text-sm font-semibold text-[var(--foreground)]">
-                {item.consistencyPercent}%
+        {formatPercent(item.consistencyPercent)}%
               </p>
             </div>
             <Progress
               value={item.consistencyPercent}
               ariaLabel={`${item.activityLabel} consistency`}
-              ariaValueText={`${item.consistencyPercent}%`}
+              ariaValueText={`${formatPercent(item.consistencyPercent)}%`}
             />
           </li>
         ))}
@@ -410,13 +414,13 @@ function ReadingSection({ report }: { report: PeriodReport }) {
               value={reading.currentBook.progressPercent}
               label={`${reading.currentBook.pagesRead} / ${reading.currentBook.book.totalPages} pages`}
               ariaLabel={`${reading.currentBook.book.title} reading progress`}
-              ariaValueText={`${reading.currentBook.progressPercent}% complete`}
+              ariaValueText={`${formatPercent(reading.currentBook.progressPercent)}% complete`}
             />
 
             <div className="grid gap-3 sm:grid-cols-3">
               <MiniMetric
                 label="Progress"
-                value={`${reading.currentBook.progressPercent}%`}
+                value={`${formatPercent(reading.currentBook.progressPercent)}%`}
               />
               <MiniMetric
                 label="Started"
@@ -744,21 +748,9 @@ function VarianceBadge({ metric }: { metric: TargetActualMetric }) {
     >
       {metric.variancePercent === null
         ? "New activity"
-        : `${formatSignedNumber(metric.variancePercent)}%`}
+        : `${formatPercent(metric.variancePercent, true)}%`}
     </span>
   );
-}
-
-function formatVarianceSentence(metric: TargetActualMetric) {
-  if (metric.difference < 0) {
-    return `Target missed by ${formatValue(Math.abs(metric.difference), metric.unit)}.`;
-  }
-
-  if (metric.difference > 0) {
-    return `Target exceeded by ${formatValue(metric.difference, metric.unit)}.`;
-  }
-
-  return "Target met exactly.";
 }
 
 function formatValue(value: number, unit: string) {
@@ -782,5 +774,5 @@ function formatChange(value: number | null) {
     return "New activity";
   }
 
-  return `${formatSignedNumber(value)}%`;
+    return `${formatPercent(value, true)}%`;
 }

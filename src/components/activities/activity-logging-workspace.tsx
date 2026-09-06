@@ -15,6 +15,7 @@ import Link from "next/link";
 import {
   createEvolveApplication,
   getDailyQuestViewModel,
+  getScheduledRequirementsForCurrentWeek,
   type EvolveLocalState,
 } from "@/application/evolve";
 import type {
@@ -388,7 +389,13 @@ function ActivityLoggingSession({
       </Card>
       ) : null}
 
-      <DailyQuests activityRecords={activityRecords} quests={quests} />
+      <DailyQuests
+        activityRecords={activityRecords}
+        quests={quests}
+        weeklyRequirements={getScheduledRequirementsForCurrentWeek(appState)}
+        now={appState.now}
+        timePolicy={appState.timePolicy}
+      />
       <ActivityHistory records={sortedRecords} />
     </div>
   );

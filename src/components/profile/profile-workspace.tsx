@@ -20,6 +20,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { SystemState } from "@/components/ui/system-state";
 import { cn } from "@/lib/utils/cn";
+import { formatPercent } from "@/lib/utils/format";
 import type { Achievement, UserTitle } from "@/types/achievement";
 import type {
   AnalysisInsight,
@@ -421,7 +422,7 @@ function DisciplineConsistency({ profile }: { profile: ProfileSnapshot }) {
           <div className="grid gap-3 sm:grid-cols-3">
             <ProfileMetric
               label="Current consistency"
-              value={`${consistency.currentConsistencyPercent}%`}
+              value={`${formatPercent(consistency.currentConsistencyPercent)}%`}
             />
             <ProfileMetric
               label="Overall streak"
@@ -446,13 +447,13 @@ function DisciplineConsistency({ profile }: { profile: ProfileSnapshot }) {
                       {item.activityLabel}
                     </p>
                     <p className="numeric font-mono text-sm font-semibold text-[var(--foreground)]">
-                      {item.consistencyPercent}%
+                      {formatPercent(item.consistencyPercent)}%
                     </p>
                   </div>
                   <Progress
                     value={item.consistencyPercent}
                     ariaLabel={`${item.activityLabel} profile consistency`}
-                    ariaValueText={`${item.consistencyPercent}%`}
+                    ariaValueText={`${formatPercent(item.consistencyPercent)}%`}
                   />
                 </li>
               ))}

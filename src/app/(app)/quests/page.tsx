@@ -1,7 +1,7 @@
 import { DailyQuests } from "@/components/quests/daily-quests";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { getActivityHistoryViewModel, getDailyQuestViewModel } from "@/application/evolve";
+import { getActivityHistoryViewModel, getDailyQuestViewModel, getScheduledRequirementsForCurrentWeek } from "@/application/evolve";
 import { getCurrentEvolveState } from "@/application/evolve/server/queries";
 
 export default async function QuestsPage() {
@@ -17,6 +17,9 @@ export default async function QuestsPage() {
       <DailyQuests
         activityRecords={getActivityHistoryViewModel(state)}
         quests={getDailyQuestViewModel(state)}
+        weeklyRequirements={getScheduledRequirementsForCurrentWeek(state)}
+        now={state.now}
+        timePolicy={state.timePolicy}
       />
     </PageContainer>
   );

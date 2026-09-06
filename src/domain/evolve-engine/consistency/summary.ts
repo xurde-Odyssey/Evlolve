@@ -124,9 +124,9 @@ export function buildActivityConsistencyProfile(
 export function derivePatternSignals(
   evidence: readonly ActivityExecutionEvidence[],
 ): ConsistencyPatternSignals {
-  const eligible = orderEvidence(
+  const eligible = collapseEvidenceByDay(orderEvidence(
     evidence.filter((item) => deriveConsistencyContribution(item).includedInDenominator),
-  );
+  ));
   let currentMissCluster = 0;
   let longestMissCluster = 0;
   let currentFullCluster = 0;
@@ -175,6 +175,28 @@ export function derivePatternSignals(
     consistencyStability: deriveCreditStability(creditValues),
     weakDaysOfWeek: deriveWeakDays(eligible),
   };
+}
+
+function collapseEvidenceByDay(evidence: readonly ActivityExecutionEvidence[]) {
+  const daily = new Map<string, ActivityExecutionEvidence>();
+
+  for (const item of evidence) {
+    const day = item.scheduledFor ?? item.occurredAt?.slice(0, 10) ?? item.createdAt.slice(0, 10);
+    const existing = daily.get(day);
+    if (!existing || patternEvidenceRank(item) > patternEvidenceRank(existing)) {
+      daily.set(day, item);
+    }
+  }
+
+  return orderEvidence([...daily.values()]);
+}
+
+function patternEvidenceRank(item: ActivityExecutionEvidence) {
+  if (item.executionState === "FULL") return 4;
+  if (item.executionState === "QUALIFYING_PARTIAL") return 3;
+  if (item.executionState === "ATTEMPT") return 2;
+  if (item.executionState === "INSUFFICIENT_EFFORT") return 1;
+  return 0;
 }
 
 function summarizeWindow(

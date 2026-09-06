@@ -19,7 +19,7 @@ export function Progress({
         <div className="flex items-center justify-between gap-3 text-sm text-[var(--foreground-muted)]">
           <span>{label}</span>
           <span className="numeric font-mono text-[var(--foreground)]">
-            {boundedValue}%
+            {formatPercent(boundedValue)}%
           </span>
         </div>
       ) : null}
@@ -40,3 +40,4 @@ export function Progress({
     </div>
   );
 }
+import { formatPercent } from "@/lib/utils/format";

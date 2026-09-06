@@ -80,6 +80,28 @@ describe("Phase 3.8 application engine integration", () => {
     assert.equal(quest?.status, "missed");
   });
 
+  it("counts multiple activity records on one day as one streak day", () => {
+    const app = createEvolveApplication(createDemoEvolveState());
+    const first = app.logActivity({
+      activityKey: "running",
+      measurementType: "distance",
+      value: 4,
+      occurredAt: "2026-08-28T12:00:00.000Z",
+    });
+    app.logActivity({
+      activityKey: "running",
+      measurementType: "distance",
+      value: 1,
+      occurredAt: "2026-08-28T15:00:00.000Z",
+    });
+
+    const nextState = app.repositories.getState();
+    const runningStreak = getTodayViewModel(nextState);
+    assert.equal(first.record.activityKey, "running");
+    assert.equal(runningStreak.items.filter((item) => item.activityKey === "running").length, 1);
+    assert.equal(getDashboardProgressionViewModel(nextState).streakDays, 1);
+  });
+
   it("keeps approved inactive and reading recovery exclusions neutral", () => {
     const state = createDemoEvolveState();
     state.commitments = state.commitments.map((commitment) =>

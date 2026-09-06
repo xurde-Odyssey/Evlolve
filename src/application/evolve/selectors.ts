@@ -15,6 +15,7 @@ import {
   generateRecommendations,
   summarizeLifetimeXp,
   type ActivityDevelopmentState,
+  type ActivityExecutionEvidence,
   type CoreWeaknessSignal,
   type DevelopmentPillar,
   type LevelProgressionState,
@@ -157,6 +158,9 @@ export function getDashboardViewModel(state: EvolveLocalState) {
     consistency: getConsistencyViewModel(state, projection),
     dailyExecution: getTodayViewModel(state),
     dailyQuests: getDailyQuestViewModel(state),
+    weeklyRequirements: getScheduledRequirementsForCurrentWeek(state),
+    now: state.now,
+    timePolicy: state.timePolicy,
     activityRecords: getActivityHistoryViewModel(state),
     weeklyReminders: getWeeklyReminderSnapshot(state),
     dashboardBoss: getBossViewModel(state, projection)[0],
@@ -883,10 +887,20 @@ function streakForActivity(state: EvolveLocalState, activityId: string) {
   const activityEvidence = state.evidence
     .filter((item) => String(item.activityId) === activityId)
     .sort((a, b) => String(a.scheduledFor ?? a.occurredAt).localeCompare(String(b.scheduledFor ?? b.occurredAt)));
+  const dailyEvidence = new Map<string, ActivityExecutionEvidence>();
+
+  for (const evidence of activityEvidence) {
+    const day = evidence.scheduledFor ?? getLocalDateKey(evidence.occurredAt ?? evidence.createdAt, state.timePolicy.timezone);
+    const existing = dailyEvidence.get(day);
+    if (!existing || streakEvidenceRank(evidence) > streakEvidenceRank(existing)) {
+      dailyEvidence.set(day, evidence);
+    }
+  }
+
   let current = 0;
   let best = 0;
 
-  for (const evidence of activityEvidence) {
+  for (const evidence of dailyEvidence.values()) {
     if (evidence.executionState === "EXCLUDED") continue;
     if (evidence.executionState === "FULL" || evidence.executionState === "QUALIFYING_PARTIAL") {
       current += 1;
@@ -897,6 +911,14 @@ function streakForActivity(state: EvolveLocalState, activityId: string) {
   }
 
   return { current, best };
+}
+
+function streakEvidenceRank(evidence: ActivityExecutionEvidence) {
+  if (evidence.executionState === "FULL") return 4;
+  if (evidence.executionState === "QUALIFYING_PARTIAL") return 3;
+  if (evidence.executionState === "ATTEMPT") return 2;
+  if (evidence.executionState === "INSUFFICIENT_EFFORT") return 1;
+  return 0;
 }
 
 function streakLength(state: ActivityDevelopmentState) {

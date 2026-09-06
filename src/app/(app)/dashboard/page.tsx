@@ -37,6 +37,9 @@ export default async function DashboardPage() {
       <DailyQuests
         activityRecords={dashboard.activityRecords}
         quests={dashboard.dailyQuests}
+        weeklyRequirements={dashboard.weeklyRequirements}
+        now={dashboard.now}
+        timePolicy={dashboard.timePolicy}
       />
     </PageContainer>
   );
