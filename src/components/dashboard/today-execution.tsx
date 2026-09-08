@@ -9,6 +9,7 @@ import {
   Clock3,
   Flame,
   ListChecks,
+  LoaderCircle,
   Moon,
   PlusCircle,
   ShieldAlert,
@@ -97,6 +98,7 @@ export function TodayExecution({ execution, completeWeeklyReminderAction }: Toda
   const [weeklyReminders, setWeeklyReminders] = useState(
     execution.weeklyReminders.reminders,
   );
+  const [savingReminderId, setSavingReminderId] = useState<string | null>(null);
   const unresolvedItems = execution.items.filter((item) => item.status === "pending");
   const requiredItems = execution.items.filter(
     (item) => item.status !== "inactive" && item.status !== "scheduled_rest",
@@ -117,22 +119,29 @@ export function TodayExecution({ execution, completeWeeklyReminderAction }: Toda
   );
 
   async function completeWeeklyReminder(reminderId: string) {
-    if (completeWeeklyReminderAction) {
-      const result = await completeWeeklyReminderAction(reminderId);
-      if (!result.ok) return;
-    }
+    if (savingReminderId) return;
 
-    setWeeklyReminders((currentReminders) =>
-      currentReminders.map((reminder) =>
-        reminder.id === reminderId
-          ? {
-              ...reminder,
-              completed: true,
-              completedAt: reminder.completedAt ?? "Current weekly cycle",
-            }
-          : reminder,
-      ),
-    );
+    setSavingReminderId(reminderId);
+    try {
+      if (completeWeeklyReminderAction) {
+        const result = await completeWeeklyReminderAction(reminderId);
+        if (!result.ok) return;
+      }
+
+      setWeeklyReminders((currentReminders) =>
+        currentReminders.map((reminder) =>
+          reminder.id === reminderId
+            ? {
+                ...reminder,
+                completed: true,
+                completedAt: reminder.completedAt ?? "Current weekly cycle",
+              }
+            : reminder,
+        ),
+      );
+    } finally {
+      setSavingReminderId(null);
+    }
   }
 
   return (
@@ -184,6 +193,7 @@ export function TodayExecution({ execution, completeWeeklyReminderAction }: Toda
 
           <WeeklyReminderSection
             reminders={enabledWeeklyReminders}
+            savingReminderId={savingReminderId}
             onCompleteReminder={completeWeeklyReminder}
           />
 
@@ -241,9 +251,11 @@ export function TodayExecution({ execution, completeWeeklyReminderAction }: Toda
 
 function WeeklyReminderSection({
   reminders,
+  savingReminderId,
   onCompleteReminder,
 }: {
   reminders: WeeklyReminder[];
+  savingReminderId: string | null;
   onCompleteReminder: (reminderId: string) => void | Promise<void>;
 }) {
   return (
@@ -274,8 +286,9 @@ function WeeklyReminderSection({
             <li
               key={reminder.id}
               className={cn(
-                "flex flex-col gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between",
+                "flex flex-col gap-3 rounded-md py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between",
                 reminder.completed && "opacity-75",
+                savingReminderId === reminder.id && "bg-[var(--accent-subtle)] px-3",
               )}
             >
               <div className="flex min-w-0 items-start gap-3">
@@ -301,17 +314,29 @@ function WeeklyReminderSection({
                 </div>
               </div>
               {reminder.completed ? (
-                <span className="text-sm font-semibold text-[var(--foreground-muted)]">
-                  Completed
+                <span className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[var(--accent-subtle)] px-4 text-sm font-semibold text-[var(--accent-pro)]">
+                  <CheckCircle2 aria-hidden="true" className="size-4" strokeWidth={2} />
+                  Done
                 </span>
               ) : (
                 <button
-                  className="inline-flex min-h-10 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] active:scale-[0.99]"
+                  className="inline-flex min-h-10 min-w-24 items-center justify-center gap-2 rounded-full border border-[var(--accent-pro)]/35 bg-[var(--background)] px-4 py-2 text-sm font-semibold text-[var(--accent-pro)] shadow-sm transition-all hover:border-[var(--accent-pro)] hover:bg-[var(--accent-subtle)] hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] active:scale-95 disabled:cursor-wait disabled:opacity-70"
                   type="button"
+                  disabled={savingReminderId !== null}
                   onClick={() => onCompleteReminder(reminder.id)}
                   aria-label={`Mark optional weekly reminder ${reminder.title} done`}
                 >
-                  Done
+                  {savingReminderId === reminder.id ? (
+                    <>
+                      <LoaderCircle aria-hidden="true" className="size-4 animate-spin" strokeWidth={2} />
+                      Saving
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 aria-hidden="true" className="size-4" strokeWidth={1.9} />
+                      Done
+                    </>
+                  )}
                 </button>
               )}
             </li>
