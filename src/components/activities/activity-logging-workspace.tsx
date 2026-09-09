@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ClipboardPenLine } from "lucide-react";
+import { ClipboardPenLine, LoaderCircle } from "lucide-react";
 import { activityDefinitions } from "@/config/activity-definitions";
 import { activityIcons } from "@/config/icon-maps";
 import { ActivityHistory } from "@/components/activities/activity-history";
@@ -208,7 +208,23 @@ function ActivityLoggingSession({
   }
 
   return (
-    <div className="space-y-6">
+    <div
+      className="relative space-y-6"
+      aria-busy={isSubmitting}
+      aria-live="polite"
+    >
+      {isSubmitting ? (
+        <div
+          className="async-soft-overlay"
+          role="status"
+          aria-label="Recording activity"
+        >
+          <div className="async-soft-status">
+            <LoaderCircle aria-hidden="true" className="size-5 animate-spin" strokeWidth={1.8} />
+            <span>Recording your activity</span>
+          </div>
+        </div>
+      ) : null}
       {activeCommitments.length === 0 ? (
         <SystemState
           title="No active commitments yet."

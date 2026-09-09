@@ -32,6 +32,7 @@ import { evolveEnginePolicyRegistry } from "@/domain/evolve-engine/simulation/po
 import { SupabaseEvolveStateRepository } from "@/infrastructure/supabase/evolve-state-repository";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { isSupabaseAuthorityConfigured } from "@/lib/supabase/env";
+import { lookupBookMetadata } from "@/lib/books/open-library";
 import {
   errorResult,
   successResult,
@@ -245,6 +246,7 @@ export async function activateBookaholicAuthoritatively(
   }
 
   const now = new Date().toISOString();
+  const metadata = await lookupBookMetadata(input.bookTitle);
   return mutateState((memory) => {
     const state = memory.getState();
     const commitmentId = `commitment:${input.configuration.activityKey}`;
@@ -279,6 +281,7 @@ export async function activateBookaholicAuthoritatively(
       totalPages: Math.round(input.totalPages),
       startedAt: now.slice(0, 10),
       status: "reading",
+      metadata,
     };
     memory.replaceState({
       ...state,

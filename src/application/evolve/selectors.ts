@@ -41,7 +41,9 @@ import type { WeeklyReminderSnapshot } from "../../types/weekly-reminder";
 import {
   getCalendarBoundaryLabel,
   getLocalDateKey,
+  getLocalDateParts,
   getNotificationDeadlineState,
+  getProgressionDeadlineAt,
   getProgressionDeadlineLabel,
   getReminderThresholdLabel,
 } from "./time-policy";
@@ -49,6 +51,7 @@ import {
   getEvidenceForRequirement,
   getScheduledRequirementsForCurrentWeek,
   getScheduledRequirementsForDate,
+  isCommitmentScheduledOn,
 } from "./scheduling";
 import type { EvolveLocalState, ScheduledRequirement } from "./types";
 
@@ -168,6 +171,10 @@ export function getDashboardViewModel(state: EvolveLocalState) {
     latestAchievement: getAchievementSnapshot(state, projection).achievements.find((achievement) => achievement.status === "earned"),
     improvements: getCommitmentViewModel(state, projection),
     attributes: getProgressSnapshotAttributes(state, projection),
+    bookOverview: {
+      currentBook: state.books.find((book) => book.status === "reading"),
+      completedBooks: state.books.filter((book) => book.status === "completed").length,
+    },
   };
 }
 
@@ -175,6 +182,8 @@ export function getDashboardProgressionViewModel(
   state: EvolveLocalState,
   projection = getEngineProjection(state),
 ): CharacterIdentityData {
+  const consistency = getConsistencyViewModel(state, projection);
+
   return {
     name: state.profile?.displayName ?? "Your profile",
     level: projection.levelState.currentLevel,
@@ -182,8 +191,8 @@ export function getDashboardProgressionViewModel(
     currentXp: projection.xp.totalLifetimeXp,
     levelStateLabel: levelDirectionLabel(projection.levelState),
     title: selectedTitleLabel(state, projection),
-    streakDays: currentBestStreak(projection.activityStates).current,
-    bestStreakDays: currentBestStreak(projection.activityStates).best,
+    streakDays: consistency.overall.currentStreak,
+    bestStreakDays: consistency.overall.bestStreak,
   };
 }
 
@@ -880,12 +889,8 @@ function selectedTitleLabel(state: EvolveLocalState, projection: EvolveEnginePro
   return titleViewModels(state, projection).find((title) => title.selected)?.name ?? "Evolving";
 }
 
-function currentBestStreak(activityStates: readonly ActivityDevelopmentState[]) {
-  const current = Math.max(...activityStates.map((state) => streakLength(state)), 0);
-  return { current, best: current };
-}
-
 function streakForActivity(state: EvolveLocalState, activityId: string) {
+  const commitment = state.commitments.find((item) => String(item.activityKey) === activityId);
   const activityEvidence = state.evidence
     .filter((item) => String(item.activityId) === activityId)
     .sort((a, b) => String(a.scheduledFor ?? a.occurredAt).localeCompare(String(b.scheduledFor ?? b.occurredAt)));
@@ -899,20 +904,139 @@ function streakForActivity(state: EvolveLocalState, activityId: string) {
     }
   }
 
+  if (commitment?.schedule.type === "times_per_week") {
+    return weeklyQuotaStreak(state, commitment, dailyEvidence);
+  }
+
+  return scheduledDayStreak(state, commitment, dailyEvidence);
+}
+
+function scheduledDayStreak(
+  state: EvolveLocalState,
+  commitment: EvolveLocalState["commitments"][number] | undefined,
+  dailyEvidence: Map<string, ActivityExecutionEvidence>,
+) {
+  if (!commitment) return evidenceOnlyStreak(dailyEvidence);
+
+  const today = getLocalDateKey(state.now, state.timePolicy.timezone);
+  const firstEvidenceDate = [...dailyEvidence.keys()].sort()[0];
+  const startDate = [
+    getLocalDateKey(commitment.startedAt, state.timePolicy.timezone),
+    firstEvidenceDate,
+  ].filter((value): value is string => Boolean(value)).sort()[0] ?? today;
+
+  let current = 0;
+  let best = 0;
+  let lastScheduledDate: string | undefined;
+
+  for (const date of dateKeysBetween(startDate, today)) {
+    if (!isCommitmentScheduledOn(commitment, date, state.timePolicy)) continue;
+
+    if (lastScheduledDate && calendarDayDistance(lastScheduledDate, date) > 1) {
+      current = 0;
+    }
+    lastScheduledDate = date;
+
+    const evidence = dailyEvidence.get(date);
+    if (evidence?.executionState === "EXCLUDED") continue;
+
+    if (isOnTimeQualifyingEvidence(evidence)) {
+      current += 1;
+      best = Math.max(best, current);
+      continue;
+    }
+
+    // The current day is still open before the 10 PM progression deadline.
+    // It must not break an otherwise valid streak while the user can still act.
+    if (date === today && !isPastDeadline(state, date)) break;
+
+    current = 0;
+  }
+
+  return { current, best };
+}
+
+function weeklyQuotaStreak(
+  state: EvolveLocalState,
+  commitment: EvolveLocalState["commitments"][number],
+  dailyEvidence: Map<string, ActivityExecutionEvidence>,
+) {
+  const today = getLocalDateKey(state.now, state.timePolicy.timezone);
+  const currentWeek = getWeekKey(today, state.timePolicy.timezone);
+  const weekCounts = new Map<string, number>();
+
+  for (const [date, evidence] of dailyEvidence) {
+    if (!isOnTimeQualifyingEvidence(evidence)) continue;
+    const week = getWeekKey(date, state.timePolicy.timezone);
+    weekCounts.set(week, (weekCounts.get(week) ?? 0) + 1);
+  }
+
+  const quota = Math.max(
+    1,
+    commitment.schedule.type === "times_per_week" ? commitment.schedule.timesPerWeek : 1,
+  );
+  const currentWeekCount = weekCounts.get(currentWeek) ?? 0;
+  const currentWeekClosed = isPastDeadline(state, today) && getLocalDateParts(state.now, state.timePolicy.timezone).weekday === "SATURDAY";
+  const current = currentWeekClosed && currentWeekCount < quota ? 0 : currentWeekCount;
+
+  return {
+    current,
+    best: Math.max(...weekCounts.values(), 0),
+  };
+}
+
+function evidenceOnlyStreak(dailyEvidence: Map<string, ActivityExecutionEvidence>) {
   let current = 0;
   let best = 0;
 
   for (const evidence of dailyEvidence.values()) {
-    if (evidence.executionState === "EXCLUDED") continue;
-    if (evidence.executionState === "FULL" || evidence.executionState === "QUALIFYING_PARTIAL") {
+    if (isOnTimeQualifyingEvidence(evidence)) {
       current += 1;
       best = Math.max(best, current);
-    } else {
+    } else if (evidence.executionState !== "EXCLUDED") {
       current = 0;
     }
   }
 
   return { current, best };
+}
+
+function isOnTimeQualifyingEvidence(evidence: ActivityExecutionEvidence | undefined) {
+  return Boolean(
+    evidence?.deadlineState === "ON_TIME" &&
+      (evidence.executionState === "FULL" || evidence.executionState === "QUALIFYING_PARTIAL"),
+  );
+}
+
+function isPastDeadline(state: EvolveLocalState, date: string) {
+  return new Date(state.now).getTime() > new Date(getProgressionDeadlineAt(date, state.timePolicy)).getTime();
+}
+
+function dateKeysBetween(startDate: string, endDate: string) {
+  const dates: string[] = [];
+  const cursor = new Date(`${startDate}T12:00:00.000Z`);
+  const end = new Date(`${endDate}T12:00:00.000Z`).getTime();
+
+  while (cursor.getTime() <= end) {
+    dates.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+
+  return dates;
+}
+
+function calendarDayDistance(firstDate: string, secondDate: string) {
+  const first = new Date(`${firstDate}T12:00:00.000Z`).getTime();
+  const second = new Date(`${secondDate}T12:00:00.000Z`).getTime();
+  return Math.abs(Math.round((second - first) / 86_400_000));
+}
+
+function getWeekKey(date: string, timezone: string) {
+  const local = getLocalDateParts(`${date}T12:00:00.000Z`, timezone);
+  const dayIndex = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"].indexOf(local.weekday);
+  const weekStart = new Date(`${date}T12:00:00.000Z`);
+  weekStart.setUTCDate(weekStart.getUTCDate() - dayIndex);
+  return weekStart.toISOString().slice(0, 10);
 }
 
 function streakEvidenceRank(evidence: ActivityExecutionEvidence) {
@@ -921,11 +1045,6 @@ function streakEvidenceRank(evidence: ActivityExecutionEvidence) {
   if (evidence.executionState === "ATTEMPT") return 2;
   if (evidence.executionState === "INSUFFICIENT_EFFORT") return 1;
   return 0;
-}
-
-function streakLength(state: ActivityDevelopmentState) {
-  const signals = state.consistency.profile.currentWeek.patternSignals;
-  return signals.longestFullCluster;
 }
 
 function todayStateForActivity(

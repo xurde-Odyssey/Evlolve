@@ -145,7 +145,19 @@ export function TodayExecution({ execution, completeWeeklyReminderAction }: Toda
   }
 
   return (
-    <Card className="space-y-5">
+    <Card className="relative space-y-5">
+      {savingReminderId !== null ? (
+        <div
+          className="async-soft-overlay"
+          role="status"
+          aria-label="Saving weekly reminder"
+        >
+          <div className="async-soft-status">
+            <LoaderCircle aria-hidden="true" className="size-5 animate-spin" strokeWidth={1.8} />
+            <span>Saving your reminder</span>
+          </div>
+        </div>
+      ) : null}
       <TodayHeader
         execution={execution}
         missedCount={missedItems.length}

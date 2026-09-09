@@ -1,6 +1,7 @@
 import { LatestAchievementPreview } from "@/components/achievements/latest-achievement-preview";
 import { BossPreview } from "@/components/boss/boss-preview";
 import { CharacterAttributes } from "@/components/dashboard/character-attributes";
+import { BookOverviewKpi } from "@/components/dashboard/book-overview-kpi";
 import { ConsistencyOverview } from "@/components/dashboard/consistency-overview";
 import { DashboardIdentity } from "@/components/dashboard/dashboard-identity";
 import { TodayExecution } from "@/components/dashboard/today-execution";
@@ -9,9 +10,15 @@ import { PageContainer } from "@/components/layout/page-container";
 import { DailyQuests } from "@/components/quests/daily-quests";
 import { getDashboardQuery } from "@/application/evolve/server/queries";
 import { completeWeeklyReminderAction } from "./actions";
+import { lookupBookMetadata } from "@/lib/books/open-library";
 
 export default async function DashboardPage() {
   const dashboard = await getDashboardQuery();
+  const currentBook = dashboard.bookOverview.currentBook;
+  const freshBookMetadata = currentBook
+    ? await lookupBookMetadata(currentBook.title)
+    : undefined;
+  const bookMetadata = freshBookMetadata ?? currentBook?.metadata;
 
   return (
     <PageContainer>
@@ -43,6 +50,11 @@ export default async function DashboardPage() {
         weeklyRequirements={dashboard.weeklyRequirements}
         now={dashboard.now}
         timePolicy={dashboard.timePolicy}
+      />
+      <BookOverviewKpi
+        book={currentBook}
+        metadata={bookMetadata}
+        completedBooks={dashboard.bookOverview.completedBooks}
       />
     </PageContainer>
   );

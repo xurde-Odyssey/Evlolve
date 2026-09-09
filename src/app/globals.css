@@ -323,6 +323,44 @@ select {
   transform: translateY(-1px);
 }
 
+.async-soft-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--background) 58%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: async-overlay-enter var(--motion-duration-base) var(--motion-ease) both;
+}
+
+.async-soft-status {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--accent-pro) 24%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  padding: 0.65rem 0.95rem;
+  color: var(--accent-pro);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--primary) 10%, transparent);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+@keyframes async-overlay-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 .settings-activity-item select,
 .settings-activity-item input,
 .settings-workspace select,
