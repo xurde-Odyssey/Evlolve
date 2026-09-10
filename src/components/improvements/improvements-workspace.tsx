@@ -500,10 +500,12 @@ function ProgramsPanel({
                   Requires {program.requiredSlots} slots. Needs {newSlotsNeeded} open.
                 </p>
                 <Button
+                  className={cn(blocked ? "gap-2" : "action-pill gap-2")}
                   variant={blocked ? "secondary" : "primary"}
                   disabled={blocked}
                   onClick={() => onActivateProgram(program)}
                 >
+                  <Plus aria-hidden="true" className="size-4" />
                   {blocked ? "Insufficient capacity" : "Activate Program"}
                 </Button>
               </div>

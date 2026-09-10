@@ -21,7 +21,7 @@ export function getScheduledRequirementsForDate(
       id: requirementId(commitment.id, dateKey),
       commitmentId: commitment.id,
       activityKey: commitment.activityKey,
-      title: commitment.title,
+      title: commitmentDisplayTitle(commitment),
       tier: commitment.tier,
       scheduledDate: dateKey,
       timezone: state.timePolicy.timezone,
@@ -96,6 +96,16 @@ export function isCommitmentScheduledOn(
 
 function normalizedWeeklyQuota(timesPerWeek: number) {
   return Math.max(1, Math.min(7, Math.floor(timesPerWeek)));
+}
+
+function commitmentDisplayTitle(commitment: GrowthCommitment) {
+  if (commitment.activityKey === "coding") {
+    return commitment.title
+      .replace(/^Coding\s*\/\s*Learning\b/i, "Learning")
+      .replace(/^Coding\b/i, "Learning");
+  }
+
+  return commitment.title;
 }
 
 export function deadlineStateForRequirement(

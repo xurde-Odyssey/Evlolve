@@ -49,6 +49,7 @@ export function createEvidenceFromActivityRecord(
     metadata: {
       activityLabel: record.activityLabel,
       recordStatus: record.status,
+      ...(record.exercise ? { exercise: record.exercise } : {}),
       ...(record.notes ? { notes: record.notes } : {}),
     },
     createdAt: record.occurredAt,

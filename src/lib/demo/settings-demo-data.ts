@@ -17,6 +17,7 @@ const defaultUnits: Record<MeasurementType, string> = {
   duration: "minutes",
   pages: "pages",
   volume: "L",
+  repetitions: "reps",
   completion: "completed",
 };
 

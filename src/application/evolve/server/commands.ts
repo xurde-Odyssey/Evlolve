@@ -22,7 +22,7 @@ import {
   type TargetHistoryRecord,
   type TargetProgressionRecommendation,
 } from "@/domain/evolve-engine";
-import type { ActivityKey, MeasurementType } from "@/types/activity";
+import type { ActivityKey, ActivityRecord, MeasurementType } from "@/types/activity";
 import type { ActivityConfiguration } from "@/types/settings";
 import type { Book } from "@/types/book";
 import type { WeeklyReminder } from "@/types/weekly-reminder";
@@ -44,6 +44,7 @@ export type ServerActivityLogInput = ActivityLogInput & {
 };
 
 export type ServerActivityLogResponse = {
+  record?: ActivityRecord;
   xpAwarded: number;
   matchedRequirementCount: number;
   dashboard: ReturnType<typeof getDashboardViewModel>;
@@ -93,6 +94,7 @@ export async function logActivityAuthoritatively(
   );
   if (priorRecord) {
     return successResult({
+      record: priorRecord,
       xpAwarded: 0,
       matchedRequirementCount: 0,
       dashboard: getDashboardViewModel(state),
@@ -104,6 +106,7 @@ export async function logActivityAuthoritatively(
     await repository.saveState(user.id, result.state);
 
     return successResult({
+      record: result.record,
       xpAwarded: result.xpAwarded,
       matchedRequirementCount: result.matchedRequirementCount,
       dashboard: getDashboardViewModel(result.state),
@@ -111,6 +114,7 @@ export async function logActivityAuthoritatively(
   } catch (error) {
     if (error instanceof Error && error.message.includes("already recorded")) {
       return successResult({
+        record: priorRecord,
         xpAwarded: 0,
         matchedRequirementCount: 0,
         dashboard: getDashboardViewModel(state),

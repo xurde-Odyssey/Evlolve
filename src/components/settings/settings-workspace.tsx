@@ -1,19 +1,22 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bell,
   Ban,
   BookOpen,
+  BookOpenText,
   CheckCircle2,
   Check,
   Circle,
   ChevronDown,
   LockKeyhole,
+  LoaderCircle,
   Moon,
   Plus,
   Power,
+  Save,
   ShieldCheck,
   SlidersHorizontal,
   Trash2,
@@ -25,6 +28,12 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { OfflineState } from "@/components/ui/system-state";
 import { cn } from "@/lib/utils/cn";
+import {
+  isVisualMode,
+  saveVisualMode,
+  VISUAL_MODE_STORAGE_KEY,
+  type VisualMode,
+} from "@/lib/ui/visual-mode";
 import type {
   ActivityKey,
   MeasurementOption,
@@ -115,6 +124,7 @@ const measurementLabels: Record<MeasurementType, string> = {
   duration: "Duration",
   pages: "Pages",
   volume: "Volume",
+  repetitions: "Repetitions",
   completion: "Completion",
 };
 
@@ -123,6 +133,7 @@ const defaultUnits: Record<MeasurementType, string> = {
   duration: "minutes",
   pages: "pages",
   volume: "L",
+  repetitions: "reps",
   completion: "completed",
 };
 
@@ -157,10 +168,22 @@ export function SettingsWorkspace({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingActivityKey, setPendingActivityKey] = useState<ActivityKey | null>(null);
   const [bookaholicActivationOpen, setBookaholicActivationOpen] = useState(false);
+  const [learningActivationOpen, setLearningActivationOpen] = useState(false);
+  const [learningFocus, setLearningFocus] = useState("");
+  const [visualMode, setVisualMode] = useState<VisualMode>("minimal");
 
   const activeCommitments = activities.filter((activity) => activity.active).length;
   const availableSlots = Math.max(snapshot.commitmentCapacity - activeCommitments, 0);
+
+  useEffect(() => {
+    const savedMode = localStorage.getItem(VISUAL_MODE_STORAGE_KEY);
+    if (!isVisualMode(savedMode)) return;
+
+    const syncTimer = window.setTimeout(() => setVisualMode(savedMode), 0);
+    return () => window.clearTimeout(syncTimer);
+  }, []);
 
   const measurementOptionMap = useMemo<Map<ActivityKey, MeasurementOption[]>>(() => {
     return new Map(
@@ -191,14 +214,24 @@ export function SettingsWorkspace({
       return;
     }
 
+    setPendingActivityKey(activityKey);
+
     const activity = activities.find((item) => item.activityKey === activityKey);
     if (nextActive && activityKey === "reading" && activateBookaholicAction && activity) {
       setBookaholicActivationOpen(true);
+      setPendingActivityKey(null);
+      return;
+    }
+    if (nextActive && activityKey === "coding" && activity) {
+      setLearningFocus("");
+      setLearningActivationOpen(true);
+      setPendingActivityKey(null);
       return;
     }
     if (nextActive && activateActivityAction && activity) {
       const result = await activateActivityAction(activity);
       if (!result.ok) {
+        setPendingActivityKey(null);
         setErrorMessage(result.message);
         return;
       }
@@ -207,6 +240,7 @@ export function SettingsWorkspace({
     if (!nextActive && deactivateActivityAction) {
       const result = await deactivateActivityAction(activityKey);
       if (!result.ok) {
+        setPendingActivityKey(null);
         setErrorMessage(result.message);
         return;
       }
@@ -219,6 +253,7 @@ export function SettingsWorkspace({
     if (activateActivityAction || deactivateActivityAction) {
       router.refresh();
     }
+    setPendingActivityKey(null);
   }
 
   async function activateBookaholic() {
@@ -248,6 +283,39 @@ export function SettingsWorkspace({
     setBookaholicActivationOpen(false);
     setErrorMessage(null);
     setStatusMessage("Bookaholic is active. Your first target starts at 5 pages.");
+    router.refresh();
+  }
+
+  async function activateLearning() {
+    const focus = learningFocus.trim();
+    if (!focus) {
+      setErrorMessage("Enter what you are learning.");
+      return;
+    }
+
+    const activity = activities.find((item) => item.activityKey === "coding");
+    if (!activity) return;
+
+    const configuration = {
+      ...activity,
+      activityLabel: `Learning · ${focus}`,
+    };
+
+    if (activateActivityAction) {
+      const result = await activateActivityAction(configuration);
+      if (!result.ok) {
+        setErrorMessage(result.message);
+        return;
+      }
+    }
+
+    updateActivity("coding", (currentActivity) => ({
+      ...currentActivity,
+      activityLabel: `Learning · ${focus}`,
+    }));
+    setLearningActivationOpen(false);
+    setErrorMessage(null);
+    setStatusMessage(`Learning · ${focus} is active.`);
     router.refresh();
   }
 
@@ -358,6 +426,14 @@ export function SettingsWorkspace({
         snapshot={snapshot}
       />
 
+      <VisualStylePanel
+        mode={visualMode}
+        onChange={(mode) => {
+          setVisualMode(mode);
+          saveVisualMode(mode);
+        }}
+      />
+
       <div className="settings-primary-grid grid items-start gap-7 xl:grid-cols-[minmax(0,1.18fr)_minmax(20rem,0.82fr)]">
         <div className="grid min-w-0 gap-5">
           <ActivityConfigurationPanel
@@ -366,6 +442,7 @@ export function SettingsWorkspace({
             activeCommitments={activeCommitments}
             measurementOptionMap={measurementOptionMap}
             onToggleActivity={toggleActivity}
+            pendingActivityKey={pendingActivityKey}
             onMeasurementChange={handleMeasurementChange}
             onUpdateActivity={updateActivity}
           />
@@ -403,6 +480,15 @@ export function SettingsWorkspace({
           onRecoveryDaysChange={setRecoveryDays}
           onCancel={() => setBookaholicActivationOpen(false)}
           onConfirm={activateBookaholic}
+        />
+      ) : null}
+
+      {learningActivationOpen ? (
+        <LearningActivationDialog
+          focus={learningFocus}
+          onFocusChange={setLearningFocus}
+          onCancel={() => setLearningActivationOpen(false)}
+          onConfirm={activateLearning}
         />
       ) : null}
 
@@ -493,8 +579,8 @@ export function SettingsWorkspace({
       />
 
       <div className="flex justify-end">
-        <Button className="w-full gap-2 sm:w-auto" onClick={saveSettings} disabled={isSaving}>
-          {isSaving ? <span className="button-spinner" aria-hidden="true" /> : null}
+        <Button className="action-pill w-full gap-2 sm:w-auto" onClick={saveSettings} disabled={isSaving}>
+          {isSaving ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <Save aria-hidden="true" className="size-4" />}
           {isSaving ? "Saving..." : "Save Settings"}
         </Button>
       </div>
@@ -868,6 +954,62 @@ function WeeklyRemindersPanel({
   );
 }
 
+function VisualStylePanel({
+  mode,
+  onChange,
+}: {
+  mode: VisualMode;
+  onChange: (mode: VisualMode) => void;
+}) {
+  return (
+    <Card className="space-y-4">
+      <div className="flex items-start gap-3">
+        <BookOpenText aria-hidden="true" className="mt-0.5 size-5 text-[var(--accent-pro)]" strokeWidth={1.8} />
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--foreground-muted)]">
+            Visual mode
+          </p>
+          <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">
+            Choose your working atmosphere
+          </h2>
+        </div>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Visual mode">
+        {([
+          ["modern", "Modern", "Current Evolve style"],
+          ["minimal", "Minimal", "Monochrome journal style"],
+        ] as const).map(([value, label, description]) => {
+          const selected = mode === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => onChange(value)}
+              className={cn(
+                "flex min-h-16 items-center justify-between gap-3 rounded-md border px-4 py-3 text-left transition",
+                selected
+                  ? "border-[var(--accent-pro)] bg-[var(--accent-subtle)] text-[var(--foreground)] shadow-[var(--shadow-soft)]"
+                  : "border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--foreground-muted)] hover:border-[var(--accent-pro)]",
+              )}
+            >
+              <span>
+                <span className="block text-sm font-semibold">{label}</span>
+                <span className="mt-1 block text-xs">{description}</span>
+              </span>
+              <span className={cn("grid size-5 shrink-0 place-items-center rounded-full border", selected ? "border-[var(--accent-pro)]" : "border-[var(--border)]")}>
+                {selected ? <span className="size-2.5 rounded-full bg-[var(--accent-pro)]" /> : null}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-xs text-[var(--foreground-muted)]">Applies instantly and does not change your Evolve data or progression.</p>
+    </Card>
+  );
+}
+
 function SettingsOverview({
   snapshot,
   activeCommitments,
@@ -914,6 +1056,7 @@ function ActivityConfigurationPanel({
   capacity,
   measurementOptionMap,
   onToggleActivity,
+  pendingActivityKey,
   onMeasurementChange,
   onUpdateActivity,
 }: {
@@ -922,6 +1065,7 @@ function ActivityConfigurationPanel({
   capacity: number;
   measurementOptionMap: Map<ActivityKey, { type: MeasurementType; label: string; unit: string }[]>;
   onToggleActivity: (activityKey: ActivityKey, nextActive: boolean) => void | Promise<void>;
+  pendingActivityKey: ActivityKey | null;
   onMeasurementChange: (
     activity: ActivityConfiguration,
     measurementType: MeasurementType,
@@ -979,17 +1123,14 @@ function ActivityConfigurationPanel({
                 </div>
                 <Button
                   variant="ghost"
-                  className={cn(
-                    "min-h-10 gap-2 rounded-full border px-4 text-[var(--accent-pro)] transition-all",
-                    "border-[var(--accent-pro)]/35 hover:border-[var(--accent-pro)] hover:bg-[var(--accent-subtle)] hover:text-[var(--accent-pro)]",
-                  )}
-                  disabled={!activity.active && activeCommitments >= capacity}
+                  className="action-pill-outline gap-2"
+                  disabled={pendingActivityKey === activity.activityKey || (!activity.active && activeCommitments >= capacity)}
                   onClick={() =>
                     onToggleActivity(activity.activityKey, !activity.active)
                   }
                 >
-                  <Power aria-hidden="true" className="size-4" strokeWidth={1.9} />
-                  {activity.active ? "Deactivate" : "Activate"}
+                  {pendingActivityKey === activity.activityKey ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <Power aria-hidden="true" className="size-4" strokeWidth={1.9} />}
+                  {pendingActivityKey === activity.activityKey ? (activity.active ? "Deactivating..." : "Activating...") : activity.active ? "Deactivate" : "Activate"}
                 </Button>
               </div>
 
@@ -1451,7 +1592,7 @@ function CustomActivityPanel({
         </p>
 
         <Button
-          className="settings-primary-action w-full gap-2 sm:w-auto"
+          className="action-pill w-full gap-2 sm:w-auto"
           type="submit"
           variant="primary"
         >
@@ -1603,7 +1744,56 @@ function BookaholicActivationDialog({
         />
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="secondary" onClick={onCancel}>Cancel</Button>
-          <Button variant="primary" onClick={onConfirm}>Activate Bookaholic</Button>
+          <Button className="action-pill gap-2" variant="primary" onClick={onConfirm}><Power aria-hidden="true" className="size-4" />Activate Bookaholic</Button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function LearningActivationDialog({
+  focus,
+  onFocusChange,
+  onCancel,
+  onConfirm,
+}: {
+  focus: string;
+  onFocusChange: (value: string) => void;
+  onCancel: () => void;
+  onConfirm: () => void | Promise<void>;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="learning-activation-title"
+    >
+      <Card className="w-full max-w-xl space-y-5 bg-[var(--surface)] shadow-xl">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--foreground-muted)]">
+            Start a Growth Commitment
+          </p>
+          <h2 id="learning-activation-title" className="mt-2 text-2xl font-semibold text-[var(--foreground)]">
+            What are you learning?
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--foreground-muted)]">
+            Name the capability or outcome you are building. Evolve will show it with your Learning commitment.
+          </p>
+        </div>
+        <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
+          <span>Learning focus</span>
+          <input
+            autoFocus
+            className="min-h-11 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)]"
+            placeholder="e.g. Data Analyst"
+            value={focus}
+            onChange={(event) => onFocusChange(event.target.value)}
+          />
+        </label>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+          <Button className="action-pill gap-2" variant="primary" onClick={onConfirm}><Power aria-hidden="true" className="size-4" />Activate Learning</Button>
         </div>
       </Card>
     </div>

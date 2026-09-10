@@ -5,6 +5,7 @@ import { SettingsWorkspace } from "@/components/settings/settings-workspace";
 import {
   getCalendarBoundaryLabel,
   getCommitmentViewModel,
+  commitmentDisplayTitle,
   getProgressionDeadlineLabel,
   getReminderThresholdLabel,
 } from "@/application/evolve";
@@ -67,7 +68,7 @@ function createSettingsSnapshot(state: Awaited<ReturnType<typeof getCurrentEvolv
     const measurement = definition.measurementOptions.find((option) => option.type === (commitment?.measurementType ?? fallback.measurementType)) ?? definition.measurementOptions[0];
     return {
       activityKey: definition.key,
-      activityLabel: commitment?.title ?? definition.label,
+      activityLabel: commitment ? commitmentDisplayTitle(commitment) : definition.label,
       active: commitment?.status === "active",
       measurementType: commitment?.measurementType ?? measurement?.type ?? fallback.measurementType,
       unit: commitment?.unit ?? measurement?.unit ?? "units",

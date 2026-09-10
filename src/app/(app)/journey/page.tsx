@@ -12,7 +12,6 @@ export default async function JourneyPage() {
       <PageHeader
         eyebrow="/journey"
         title="Your Journey"
-        description="A long-term record of completed milestones, current position, and upcoming progression markers across Evolve."
       />
       <JourneyTimeline journey={getJourneyViewModel(state)} />
     </PageContainer>

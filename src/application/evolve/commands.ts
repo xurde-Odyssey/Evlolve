@@ -64,12 +64,19 @@ export function logActivity(
 ): ActivityLogResult {
   const state = repositories.getState();
   const definition = activityDefinitions.find((item) => item.key === input.activityKey);
+  if (input.activityKey === "workout" && input.exercise && !isWorkoutExercise(input.exercise)) {
+    throw new EvolveCommandError("INVALID_ACTIVITY", "Choose a valid workout exercise.");
+  }
+  if (input.activityKey !== "workout" && input.exercise) {
+    throw new EvolveCommandError("INVALID_ACTIVITY", "Exercise details only apply to Workout logs.");
+  }
   const unit = input.unit ?? definition?.measurementOptions.find((item) => item.type === input.measurementType)?.unit;
   const record: ActivityRecord = {
-    id: `activity:${input.activityKey}:${input.occurredAt}:${input.value ?? "completed"}`,
+    id: `activity:${input.activityKey}:${input.exercise ?? "general"}:${input.occurredAt}:${input.value ?? "completed"}`,
     idempotencyKey: input.idempotencyKey,
     activityKey: input.activityKey,
-    activityLabel: definition?.label ?? input.activityKey,
+    activityLabel: workoutRecordLabel(definition?.label ?? input.activityKey, input.exercise),
+    exercise: input.exercise,
     measurement: {
       type: input.measurementType,
       value: input.value,
@@ -143,6 +150,23 @@ export function logActivity(
       ["FULL", "QUALIFYING_PARTIAL"].includes(item.executionState),
     ).length,
   };
+}
+
+function isWorkoutExercise(value: string): value is NonNullable<ActivityLogInput["exercise"]> {
+  return ["general", "running", "skipping", "pushups", "pullups", "squats"].includes(value);
+}
+
+function workoutRecordLabel(label: string, exercise?: ActivityLogInput["exercise"]) {
+  if (!exercise || exercise === "general") return label;
+  const exerciseLabels: Record<NonNullable<ActivityLogInput["exercise"]>, string> = {
+    general: "General workout",
+    running: "Running",
+    skipping: "Skipping",
+    pushups: "Push-ups",
+    pullups: "Pull-ups",
+    squats: "Squats",
+  };
+  return `${label} · ${exerciseLabels[exercise]}`;
 }
 
 export function completeWeeklyReminder(

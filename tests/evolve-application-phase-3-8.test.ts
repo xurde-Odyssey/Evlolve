@@ -64,6 +64,25 @@ describe("Phase 3.8 application engine integration", () => {
     assert.ok(result.xpAwarded > 0);
   });
 
+  it("stores workout exercise details without creating a separate commitment", () => {
+    const app = createEvolveApplication(createDemoEvolveState());
+    const result = app.logActivity({
+      activityKey: "workout",
+      exercise: "pushups",
+      measurementType: "repetitions",
+      value: 35,
+      unit: "reps",
+      occurredAt: "2026-08-28T15:00:00.000Z",
+    });
+
+    assert.equal(result.record.activityKey, "workout");
+    assert.equal(result.record.exercise, "pushups");
+    assert.equal(result.record.activityLabel, "Workout · Push-ups");
+    assert.equal(result.record.measurement.value, 35);
+    assert.equal(result.record.measurement.unit, "reps");
+    assert.equal(result.state.commitments.filter((item) => item.activityKey === "workout").length, 1);
+  });
+
   it("preserves late activity without repairing the missed required session", () => {
     const app = createEvolveApplication(createDemoEvolveState());
     const result = app.logActivity({

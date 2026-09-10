@@ -7,7 +7,9 @@ import {
   Crown,
   History,
   LineChart,
+  LoaderCircle,
   PenLine,
+  Save,
   ShieldCheck,
   Target,
   Trophy,
@@ -48,6 +50,7 @@ export function ProfileWorkspace({ profile, updateProfileAction, selectTitleActi
   const [draft, setDraft] = useState(profile.personal);
   const [titles, setTitles] = useState(profile.titles);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selectedTitle =
     titles.find((title) => title.selected) ??
@@ -89,9 +92,11 @@ export function ProfileWorkspace({ profile, updateProfileAction, selectTitleActi
       name: draft.name.trim(),
       goals: draft.goals?.map((goal) => goal.trim()).filter(Boolean),
     };
+    setIsSavingProfile(true);
     if (updateProfileAction) {
       const result = await updateProfileAction(normalized satisfies ProfileUpdateInput);
       if (!result.ok) {
+        setIsSavingProfile(false);
         setError(result.message);
         return;
       }
@@ -99,6 +104,7 @@ export function ProfileWorkspace({ profile, updateProfileAction, selectTitleActi
     setPersonal(normalized);
     setError(null);
     setIsEditing(false);
+    setIsSavingProfile(false);
   }
 
   return (
@@ -119,6 +125,7 @@ export function ProfileWorkspace({ profile, updateProfileAction, selectTitleActi
           onCancel={() => setIsEditing(false)}
           onChange={setDraft}
           onSubmit={saveProfile}
+          isSaving={isSavingProfile}
         />
       ) : null}
 
@@ -318,12 +325,14 @@ function ProfileEditForm({
   onCancel,
   onChange,
   onSubmit,
+  isSaving,
 }: {
   draft: PersonalProfile;
   error: string | null;
   onCancel: () => void;
   onChange: (profile: PersonalProfile) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  isSaving: boolean;
 }) {
   const goals = draft.goals ?? [];
 
@@ -406,10 +415,13 @@ function ProfileEditForm({
         ) : null}
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button variant="secondary" onClick={onCancel}>
+          <Button className="action-pill-outline gap-2" variant="ghost" onClick={onCancel} disabled={isSaving}>
             Cancel
           </Button>
-          <Button type="submit">Save Profile</Button>
+          <Button className="action-pill gap-2" type="submit" disabled={isSaving}>
+            {isSaving ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <Save aria-hidden="true" className="size-4" />}
+            {isSaving ? "Saving..." : "Save Profile"}
+          </Button>
         </div>
       </form>
     </Card>

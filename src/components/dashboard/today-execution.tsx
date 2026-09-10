@@ -380,10 +380,9 @@ function TodayHeader({
   return (
     <div
       className={cn(
-        "rounded-lg border border-[var(--border)] bg-[var(--background)] p-4",
-        level === "reminder" && "bg-[var(--accent-subtle)]",
-        level === "warning" && "bg-[var(--warning-subtle)]",
-        level === "critical" && "bg-[var(--boss-subtle)]",
+        "notebook-card rounded-lg border border-[var(--border)] p-4",
+        level === "warning" && "notebook-card-warning",
+        level === "critical" && "notebook-card-critical",
       )}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -393,7 +392,7 @@ function TodayHeader({
               Today
             </p>
             {level ? (
-              <Badge tone={level === "critical" ? "warning" : "neutral"}>
+              <Badge tone={level === "critical" ? "warning" : level === "warning" ? "accent" : "neutral"}>
                 {severityLabels[level]}
               </Badge>
             ) : (
@@ -418,7 +417,7 @@ function TodayHeader({
             <span className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">
               Deadline
             </span>
-            <span className="numeric font-mono text-sm font-semibold text-[var(--foreground)]">
+            <span className="numeric font-mono text-sm font-semibold text-[var(--accent-pro)]">
               {execution.deadlineLabel}
             </span>
           </div>
@@ -531,8 +530,8 @@ function DeadlineCard({
   return (
     <section
       className={cn(
-        "space-y-3 rounded-md border border-[var(--border)] bg-[var(--background)] p-4",
-        level === "critical" && "bg-[var(--boss-subtle)]",
+        "notebook-card space-y-3 rounded-md border border-[var(--border)] p-4",
+        level === "critical" && "notebook-card-critical",
       )}
       aria-labelledby="daily-deadline-heading"
     >

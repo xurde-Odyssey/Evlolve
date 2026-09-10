@@ -12,7 +12,6 @@ export default async function ReportsPage() {
       <PageHeader
         eyebrow="/reports"
         title="Reports & Analytics"
-        description="Evidence from activity, commitments, reading, consistency, and progression history."
       />
       <ReportsWorkspace snapshot={getReportsViewModel(state)} />
     </PageContainer>

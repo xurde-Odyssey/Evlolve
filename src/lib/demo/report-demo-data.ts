@@ -248,7 +248,7 @@ const thisWeekActivities = [
   }),
   createActivityReport({
     activityKey: "coding",
-    activityLabel: "Coding / Learning",
+    activityLabel: "Learning",
     measurementType: "duration",
     metricLabel: "Practice",
     target: 420,
@@ -569,7 +569,7 @@ function createPeriodReport({
         },
         {
           activityKey: "coding",
-          activityLabel: "Coding / Learning",
+          activityLabel: "Learning",
           consistencyPercent: 88,
           currentStreak: 9,
           bestStreak: 21,
@@ -651,7 +651,7 @@ function createPeriodReport({
       },
       {
         activityKey: "coding",
-        activityLabel: "Coding / Learning",
+          activityLabel: "Learning",
         observationLabel: "2 weeks of data",
       },
     ],

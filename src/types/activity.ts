@@ -13,7 +13,16 @@ export type MeasurementType =
   | "duration"
   | "pages"
   | "volume"
+  | "repetitions"
   | "completion";
+
+export type WorkoutExercise =
+  | "general"
+  | "running"
+  | "skipping"
+  | "pushups"
+  | "pullups"
+  | "squats";
 
 export type MeasurementOption = {
   type: MeasurementType;
@@ -41,6 +50,7 @@ export type ActivityRecord = {
     value?: number;
     unit?: string;
   };
+  exercise?: WorkoutExercise;
   notes?: string;
   occurredAt: string;
   status: "completed";

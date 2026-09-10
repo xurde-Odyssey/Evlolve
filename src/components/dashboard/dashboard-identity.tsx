@@ -26,7 +26,7 @@ export function DashboardIdentity({ character }: DashboardIdentityProps) {
   const stage = getCoreStoneStage(character.level);
 
   return (
-    <Card className="overflow-hidden p-0">
+    <Card className="notebook-card overflow-hidden p-0">
       <div className="p-5 sm:p-7">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
@@ -34,8 +34,8 @@ export function DashboardIdentity({ character }: DashboardIdentityProps) {
               <CoreStone level={character.level} highestLevel={character.highestLevel} size="sm" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-base font-semibold text-[var(--foreground)] sm:text-lg">Good afternoon, {character.name}</p>
-              <p className="mt-1 truncate text-xs font-semibold uppercase tracking-[0.07em] text-[var(--foreground-muted)]">Continue evolving · {stage.key}</p>
+              <p className="journal-copy truncate text-lg font-semibold text-[var(--foreground)] sm:text-xl">Good afternoon, {character.name}</p>
+              <p className="journal-copy mt-1 truncate text-sm italic text-[var(--foreground-muted)]">Continue evolving · {stage.key}</p>
             </div>
           </div>
           <div className="hidden shrink-0 items-center gap-1.5 rounded-full border border-[var(--accent-pro)]/30 bg-[var(--accent-subtle)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-pro)] sm:flex">

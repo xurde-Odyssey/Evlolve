@@ -9,7 +9,7 @@ import { NavigationItem } from "./navigation-item";
 
 export function SidebarNavigation() {
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[15.5rem] border-r border-[var(--border)] bg-[var(--chrome-surface)] px-4 py-5 backdrop-blur lg:block xl:w-64">
+    <aside className="app-sidebar fixed inset-y-0 left-0 z-30 hidden w-[15.5rem] border-r border-[var(--border)] bg-[var(--chrome-surface)] px-4 py-5 backdrop-blur lg:block xl:w-64">
       <div className="flex h-full flex-col">
         <Link href="/dashboard" className="flex items-center gap-3 px-2">
           <LogoMark />

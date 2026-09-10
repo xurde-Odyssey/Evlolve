@@ -17,7 +17,7 @@ import type {
   XpTransaction,
 } from "../../domain/evolve-engine";
 import type { AchievementAward } from "../../domain/evolve-engine";
-import type { ActivityKey, ActivityRecord, MeasurementType } from "../../types/activity";
+import type { ActivityKey, ActivityRecord, MeasurementType, WorkoutExercise } from "../../types/activity";
 import type { Book } from "../../types/book";
 import type { WeeklyReminder } from "../../types/weekly-reminder";
 import type { UserTimePolicy } from "./time-policy";
@@ -117,6 +117,7 @@ export type ActivityLogInput = {
   measurementType: MeasurementType;
   value?: number;
   unit?: string;
+  exercise?: WorkoutExercise;
   notes?: string;
   occurredAt: string;
 };
@@ -137,6 +138,7 @@ export type EvolveCommandErrorCode =
   | "BOSS_NOT_ACCEPTABLE"
   | "RECOMMENDATION_SUPERSEDED"
   | "DUPLICATE_ACTIVITY_EVIDENCE"
+  | "INVALID_ACTIVITY"
   | "INVALID_INACTIVE_PERIOD";
 
 export class EvolveCommandError extends Error {

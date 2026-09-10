@@ -49,49 +49,13 @@ export const activityDefinitions = [
   },
   {
     key: "coding",
-    label: "Coding / Learning",
+    label: "Learning",
     source: "system",
     measurementOptions: [
       {
         type: "duration",
         label: "Duration",
         unit: "minutes",
-      },
-    ],
-  },
-  {
-    key: "meditation",
-    label: "Mental Training",
-    source: "system",
-    measurementOptions: [
-      {
-        type: "duration",
-        label: "Duration",
-        unit: "minutes",
-      },
-    ],
-  },
-  {
-    key: "sleep",
-    label: "Endurance",
-    source: "system",
-    measurementOptions: [
-      {
-        type: "duration",
-        label: "Duration",
-        unit: "hours",
-      },
-    ],
-  },
-  {
-    key: "water",
-    label: "Deep Work",
-    source: "system",
-    measurementOptions: [
-      {
-        type: "volume",
-        label: "Volume",
-        unit: "L",
       },
     ],
   },

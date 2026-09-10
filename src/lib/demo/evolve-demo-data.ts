@@ -1048,8 +1048,8 @@ export const demoImprovements = {
     },
     {
       id: "coding-flexible",
-      title: "Coding",
-      description: "Practice focused technical work.",
+      title: "Learning",
+      description: "Build focused knowledge and technical capability.",
       activityKey: "coding",
       tier: "flexible",
       status: "active",

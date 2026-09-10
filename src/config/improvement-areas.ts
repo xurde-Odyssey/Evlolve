@@ -27,8 +27,8 @@ export const predefinedImprovementAreas = [
   },
   {
     id: "coding",
-    title: "Coding",
-    description: "Practice focused technical work.",
+    title: "Learning",
+    description: "Build focused knowledge and technical capability.",
     activityKey: "coding",
     progressBehavior: "cumulative",
   },
@@ -37,27 +37,6 @@ export const predefinedImprovementAreas = [
     title: "Focused Study",
     description: "Protect time for deliberate learning.",
     progressBehavior: "cumulative",
-  },
-  {
-    id: "meditation",
-    title: "Mental Training",
-    description: "Develop a regular meditation practice.",
-    activityKey: "meditation",
-    progressBehavior: "cumulative",
-  },
-  {
-    id: "sleep",
-    title: "Endurance",
-    description: "Improve recovery and consistency.",
-    activityKey: "sleep",
-    progressBehavior: "state",
-  },
-  {
-    id: "hydration",
-    title: "Deep Work",
-    description: "Maintain daily hydration.",
-    activityKey: "water",
-    progressBehavior: "state",
   },
   {
     id: "saving",
@@ -72,12 +51,10 @@ export const evolvePrograms = [
     id: "physical-foundation",
     title: "Physical Foundation",
     description: "Designed to build a stronger physical baseline.",
-    requiredSlots: 4,
+    requiredSlots: 2,
     areas: [
       { title: "Running", activityKey: "running" },
       { title: "Strength Training", activityKey: "workout" },
-      { title: "Endurance", activityKey: "sleep" },
-      { title: "Deep Work", activityKey: "water" },
     ],
   },
   {
@@ -86,7 +63,7 @@ export const evolvePrograms = [
     description: "Focused improvement across technical practice and study.",
     requiredSlots: 4,
     areas: [
-      { title: "Technical Practice", activityKey: "coding" },
+      { title: "Learning", activityKey: "coding" },
       { title: "Focused Study" },
       { title: "Bookaholic", activityKey: "reading" },
       { title: "Project Work" },

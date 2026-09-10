@@ -293,7 +293,7 @@ export function getTodayViewModel(state: EvolveLocalState): DailyExecutionSnapsh
       .map((commitment) => ({
         id: `inactive:${commitment.id}`,
         title: "Inactive Mode",
-        message: `${commitment.title} is excluded until ${commitment.inactiveUntil}.`,
+        message: `${commitmentDisplayTitle(commitment)} is excluded until ${commitment.inactiveUntil}.`,
         state: "started" as const,
       })),
     notifications: unresolved.length > 0
@@ -379,7 +379,7 @@ export function getProgressSnapshotAttributes(
 
     return {
       key: attributeKeyForActivity(commitment.activityKey),
-      label: commitment.title,
+      label: commitmentDisplayTitle(commitment),
       value: actual > 0 ? `${round(actual)} ${commitment.unit}` : statusLabel(stateForActivity?.capability.baselineState ?? "NEW"),
       context: actual > 0 ? "This week" : "Baseline",
       progress: target > 0 ? Math.min(Math.round((actual / target) * 100), 100) : Math.round((stateForActivity?.consistency.value ?? 0) * 100),
@@ -397,7 +397,7 @@ export function getCommitmentViewModel(
 
     return {
       id: commitment.id,
-      title: commitment.title,
+      title: commitmentDisplayTitle(commitment),
       activityKey: commitment.activityKey,
       tier: commitment.tier,
       status: commitment.status,
@@ -714,7 +714,7 @@ export function getProfileViewModel(
     },
     currentDevelopment: state.commitments
       .filter((commitment): commitment is typeof commitment & { tier: "core" | "priority" } => commitment.status === "active" && commitment.tier !== "flexible")
-      .map((commitment) => ({ id: commitment.id, title: commitment.title, tier: commitment.tier })),
+      .map((commitment) => ({ id: commitment.id, title: commitmentDisplayTitle(commitment), tier: commitment.tier })),
     recentPerformance: getProgressSnapshotAttributes(state, projection).map((attribute) => ({
       id: attribute.key,
       label: attribute.label,
@@ -1072,6 +1072,14 @@ function scheduleLabelForCommitment(commitment: { schedule: { type: string; time
 
 function activityLabel(activityId: string) {
   return activityDefinitions.find((definition) => definition.key === activityId)?.label ?? activityId;
+}
+
+export function commitmentDisplayTitle(commitment: EvolveLocalState["commitments"][number]) {
+  if (commitment.activityKey === "coding") {
+    return commitment.title.replace(/^Coding\s*\/\s*Learning\b/i, "Learning").replace(/^Coding\b/i, "Learning");
+  }
+
+  return commitment.title;
 }
 
 function pillarForActivity(activityId: string): DevelopmentPillar {

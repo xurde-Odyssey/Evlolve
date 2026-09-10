@@ -63,7 +63,7 @@ function ActivityHistoryRow({ record, timezone }: { record: ActivityRecord; time
         />
         <div className="min-w-0">
           <p className="text-sm font-semibold text-[var(--foreground)]">
-            {record.activityLabel}
+            {displayActivityLabel(record)}
           </p>
           {record.notes ? (
             <p className="mt-1 text-sm leading-6 text-[var(--foreground-muted)]">
@@ -90,4 +90,12 @@ function formatMeasurement(record: ActivityRecord) {
   }
 
   return `${record.measurement.value} ${record.measurement.unit}`;
+}
+
+function displayActivityLabel(record: ActivityRecord) {
+  if (record.activityKey !== "coding") return record.activityLabel;
+
+  return record.activityLabel
+    .replace(/^Coding\s*\/\s*Learning\b/i, "Learning")
+    .replace(/^Coding\b/i, "Learning");
 }

@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Roboto_Mono } from "next/font/google";
+import { Caveat, Inter, Roboto_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/constants/app";
+import { VisualModeProvider } from "@/components/layout/visual-mode-provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -13,6 +14,12 @@ const inter = Inter({
 const robotoMono = Roboto_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+  display: "swap",
+});
+
+const caveat = Caveat({
+  subsets: ["latin"],
+  variable: "--font-note",
   display: "swap",
 });
 
@@ -40,8 +47,11 @@ type RootLayoutProps = {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" className={`${inter.variable} ${robotoMono.variable}`}>
-      <body>{children}</body>
+    <html lang="en" data-visual-mode="minimal" className={`${inter.variable} ${caveat.variable} ${robotoMono.variable}`}>
+      <body>
+        <VisualModeProvider />
+        {children}
+      </body>
     </html>
   );
 }

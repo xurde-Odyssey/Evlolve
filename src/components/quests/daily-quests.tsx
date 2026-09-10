@@ -41,7 +41,7 @@ export function DailyQuests({
   const allComplete = totalCount > 0 && completedCount === totalCount;
 
   return (
-    <Card className="space-y-5">
+    <Card className="notebook-card space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">
@@ -55,7 +55,7 @@ export function DailyQuests({
           <Link
             href="/activities"
             aria-label={`Today's exercise, ${completedCount} of ${totalCount} completed`}
-            className="inline-flex min-h-10 items-center justify-between gap-4 rounded-md border border-[var(--accent-pro)]/30 bg-[var(--accent-subtle)] px-3 py-2 text-sm font-semibold text-[var(--accent-pro)] transition hover:border-[var(--accent-pro)] focus-visible:outline-offset-2"
+            className="inline-flex min-h-10 items-center justify-between gap-4 rounded-md bg-[var(--accent-subtle)] px-3 py-2 text-sm font-semibold text-[var(--accent-pro)] transition hover:bg-[var(--accent-pro)]/12 focus-visible:outline-offset-2"
           >
             <span className="inline-flex items-center gap-2">
               <ClipboardPenLine aria-hidden="true" className="size-4" strokeWidth={1.9} />

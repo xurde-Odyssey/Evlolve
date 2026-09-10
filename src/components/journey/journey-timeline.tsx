@@ -51,14 +51,10 @@ export function JourneyTimeline({ journey }: JourneyTimelineProps) {
 
   return (
     <div className="space-y-6">
-      <Card className="space-y-5">
+      <Card className="notebook-card space-y-5">
         <div>
           <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">
             Journey position
-          </p>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--foreground-muted)]">
-            Lifetime progression history and near-term path. Highest reached
-            stays preserved even if current level changes later.
           </p>
         </div>
 

@@ -1,6 +1,6 @@
 type PageHeaderProps = {
   title: string;
-  description: string;
+  description?: string;
   eyebrow?: string;
 };
 
@@ -16,9 +16,11 @@ export function PageHeader({ title, description, eyebrow }: PageHeaderProps) {
         <h1 className="text-3xl font-semibold tracking-normal text-[var(--foreground)] md:text-4xl">
           {title}
         </h1>
-        <p className="max-w-2xl text-base leading-7 text-[var(--foreground-muted)]">
-          {description}
-        </p>
+        {description ? (
+          <p className="max-w-2xl text-base leading-7 text-[var(--foreground-muted)]">
+            {description}
+          </p>
+        ) : null}
       </div>
     </header>
   );
