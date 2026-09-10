@@ -19,6 +19,9 @@ import type {
 import type { AchievementAward } from "../../domain/evolve-engine";
 import type { ActivityKey, ActivityRecord, MeasurementType, WorkoutExercise } from "../../types/activity";
 import type { Book } from "../../types/book";
+import type { LearningTrack } from "../../types/learning-track";
+import type { MajorMilestone } from "../../types/major-milestone";
+import type { NotepadNote } from "../../types/notepad";
 import type { WeeklyReminder } from "../../types/weekly-reminder";
 import type { UserTimePolicy } from "./time-policy";
 
@@ -94,6 +97,9 @@ export type EvolveLocalState = {
   xpLedger: XpTransaction[];
   weeklyReminders: WeeklyReminder[];
   books: Book[];
+  learningTracks: LearningTrack[];
+  majorMilestones: MajorMilestone[];
+  notepadNotes: NotepadNote[];
   activeBosses: BossContract[];
   bossHistory: BossHistoryRecord[];
   recommendations: RecommendationHistoryRecord[];
@@ -120,6 +126,8 @@ export type ActivityLogInput = {
   exercise?: WorkoutExercise;
   notes?: string;
   occurredAt: string;
+  learningTrackId?: string;
+  learningMilestoneId?: string;
 };
 
 export type ActivityLogResult = {

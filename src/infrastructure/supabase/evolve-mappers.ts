@@ -13,6 +13,9 @@ import type {
 } from "@/domain/evolve-engine";
 import type { ActivityRecord } from "@/types/activity";
 import type { Book } from "@/types/book";
+import type { LearningTrack } from "@/types/learning-track";
+import type { MajorMilestone } from "@/types/major-milestone";
+import type { NotepadNote } from "@/types/notepad";
 import type { WeeklyReminder } from "@/types/weekly-reminder";
 import type { GrowthCommitment } from "@/application/evolve";
 import type { ScheduledRequirement } from "@/application/evolve";
@@ -81,6 +84,7 @@ export function activityRecordToRow({
   commitmentDbId,
   targetVersionDbId,
   scheduledRequirementDbId,
+  learningTrackDbId,
   idempotencyKey,
 }: {
   userId: string;
@@ -88,6 +92,7 @@ export function activityRecordToRow({
   commitmentDbId?: string;
   targetVersionDbId?: string;
   scheduledRequirementDbId?: string;
+  learningTrackDbId?: string;
   idempotencyKey?: string;
 }) {
   return {
@@ -96,6 +101,8 @@ export function activityRecordToRow({
     commitment_id: commitmentDbId ?? null,
     target_version_id: targetVersionDbId ?? null,
     scheduled_requirement_id: scheduledRequirementDbId ?? null,
+    learning_track_id: learningTrackDbId ?? null,
+    learning_milestone_id: record.learningMilestoneId ?? null,
     occurred_at: record.occurredAt,
     actual_value: record.measurement.value ?? null,
     unit: record.measurement.unit ?? null,
@@ -109,6 +116,62 @@ export function activityRecordToRow({
     policy_version: evolveEnginePolicyRegistry.version,
     domain_payload: toJson(record),
     metadata: toJson({ notesPresent: Boolean(record.notes) }),
+  };
+}
+
+export function learningTrackToRow({
+  userId,
+  track,
+  commitmentDbId,
+}: {
+  userId: string;
+  track: LearningTrack;
+  commitmentDbId: string;
+}) {
+  return {
+    domain_id: track.id,
+    user_id: userId,
+    commitment_id: commitmentDbId,
+    title: track.title,
+    track_type: track.type.toUpperCase(),
+    provider: track.provider ?? null,
+    started_at: track.startedAt,
+    target_completion_date: track.targetCompletionDate ?? null,
+    status: track.status.toUpperCase(),
+    completed_at: track.completedAt ?? null,
+    archived_at: track.archivedAt ?? null,
+    current_milestone_id: track.currentMilestoneId ?? null,
+    milestones: toJson(track.milestones),
+    domain_payload: toJson(track),
+  };
+}
+
+export function majorMilestoneToRow(userId: string, milestone: MajorMilestone, commitmentDbId: string) {
+  return {
+    domain_id: milestone.id,
+    user_id: userId,
+    commitment_id: commitmentDbId,
+    activity_type: milestone.activityKey,
+    title: milestone.title,
+    target_days: milestone.targetDays,
+    started_at: milestone.startedAt,
+    status: milestone.status.toUpperCase(),
+    completed_at: milestone.completedAt ?? null,
+    policy_version: milestone.policyVersion,
+    domain_payload: toJson(milestone),
+  };
+}
+
+export function notepadNoteToRow(userId: string, note: NotepadNote) {
+  return {
+    domain_id: note.id,
+    user_id: userId,
+    title: note.title,
+    body: note.body,
+    color: note.color.toUpperCase(),
+    created_at: note.createdAt,
+    updated_at: note.updatedAt,
+    domain_payload: toJson(note),
   };
 }
 

@@ -1,6 +1,7 @@
 import type { Achievement, UserTitle } from "@/types/achievement";
 import type { ActivityKey } from "@/types/activity";
 import type { CommitmentTier } from "@/types/improvement";
+import type { MajorMilestoneProgress } from "@/types/major-milestone";
 
 export type CharacterAvatar = {
   asset?: string;
@@ -39,6 +40,12 @@ export type ProfileDevelopmentArea = {
   id: string;
   title: string;
   tier: Extract<CommitmentTier, "core" | "priority">;
+};
+
+export type ProfileMilestoneCommitment = {
+  id: string;
+  title: string;
+  activityKey: ActivityKey;
 };
 
 export type ProfileEvidenceMetric = {
@@ -84,10 +91,12 @@ export type ProfileSnapshot = {
   titles: UserTitle[];
   consistency: ProfileConsistencySummary;
   currentDevelopment: ProfileDevelopmentArea[];
+  milestoneCommitments: ProfileMilestoneCommitment[];
   recentPerformance: ProfileEvidenceMetric[];
   lifetime: LifetimeStatistic[];
   records: PersonalRecord[];
   monthlyAnalysis: MonthlyAnalysis;
   majorAchievements: Achievement[];
   progressionHistory: ProfileEvidenceMetric[];
+  majorMilestones: MajorMilestoneProgress[];
 };

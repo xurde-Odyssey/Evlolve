@@ -565,6 +565,272 @@ html[data-visual-mode="minimal"] .app-mobile-navigation a[aria-current="page"] s
   animation: button-spin 700ms linear infinite;
 }
 
+.notepad-board {
+  background-color: var(--surface-elevated);
+  background-image: linear-gradient(to bottom, color-mix(in srgb, var(--border) 48%, transparent) 1px, transparent 1px);
+  background-size: 100% 2.15rem;
+}
+
+.notepad-heading {
+  background: linear-gradient(135deg, var(--surface-elevated), var(--background));
+}
+
+.notepad-note {
+  min-height: 12rem;
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  border-radius: 0.25rem;
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--primary) 10%, transparent);
+  transition: transform var(--motion-duration-fast) var(--motion-ease), box-shadow var(--motion-duration-fast) var(--motion-ease);
+  font-family: var(--font-note), "Segoe Print", cursive;
+}
+
+.notepad-note:hover {
+  transform: translateY(-3px) rotate(0deg) !important;
+  box-shadow: 0 16px 28px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+.notepad-note-tearing {
+  pointer-events: none;
+  animation: notepad-tear 420ms var(--motion-ease) forwards;
+}
+
+@keyframes notepad-tear {
+  0% { opacity: 1; transform: translateX(0) rotate(-1deg); clip-path: inset(0); }
+  42% { opacity: 1; transform: translateX(-0.35rem) rotate(-3deg); clip-path: polygon(0 0, 100% 0, 100% 48%, 92% 51%, 82% 48%, 72% 53%, 61% 49%, 50% 54%, 38% 48%, 26% 53%, 14% 49%, 0 54%); }
+  100% { opacity: 0; transform: translate(-1.5rem, 1.5rem) rotate(-8deg); clip-path: polygon(0 0, 100% 0, 100% 44%, 88% 50%, 75% 43%, 62% 51%, 47% 44%, 33% 52%, 16% 45%, 0 51%); }
+}
+
+.notepad-note-paper { background: var(--background); }
+.notepad-note-rose { background: color-mix(in srgb, var(--accent-subtle) 76%, var(--background)); }
+.notepad-note-yellow { background: color-mix(in srgb, #f2df98 38%, var(--background)); }
+.notepad-note-blue { background: color-mix(in srgb, #b9d7e8 34%, var(--background)); }
+
+.notepad-note-title {
+  font-family: var(--font-note), "Segoe Print", cursive;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.notepad-note-body {
+  font-family: var(--font-note), "Segoe Print", cursive;
+  font-size: 1.1rem;
+  line-height: 1.8;
+}
+
+.notepad-delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 18%, transparent);
+  padding-top: 0.7rem;
+  color: var(--foreground);
+  font-family: var(--font-note), "Segoe Print", cursive;
+  font-size: 0.95rem;
+}
+
+.notepad-delete-confirm button {
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 28%, transparent);
+  padding: 0.15rem 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.notepad-delete-confirm button:last-child { color: var(--accent-pro); }
+
+.notepad-empty-note {
+  display: grid;
+  min-height: 13rem;
+  place-items: center;
+  align-content: center;
+}
+
+.notepad-empty-add {
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  place-items: center;
+  border: 1px dashed color-mix(in srgb, var(--foreground) 45%, transparent);
+  border-radius: 999px;
+  color: var(--foreground);
+  transition: transform var(--motion-duration-fast) var(--motion-ease), background-color var(--motion-duration-fast) var(--motion-ease);
+}
+
+.notepad-empty-add:hover:not(:disabled) { transform: scale(1.06); background: color-mix(in srgb, var(--foreground) 8%, transparent); }
+
+.notepad-swatch-paper { background: var(--background); }
+.notepad-swatch-rose { background: var(--accent-subtle); }
+.notepad-swatch-yellow { background: #f2df98; }
+.notepad-swatch-blue { background: #b9d7e8; }
+
+.notepad-icon-button {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 0.25rem;
+  color: color-mix(in srgb, var(--foreground) 58%, transparent);
+  transition: color var(--motion-duration-fast) var(--motion-ease), background-color var(--motion-duration-fast) var(--motion-ease);
+}
+
+.notepad-icon-button:hover {
+  color: var(--accent-pro);
+  background: var(--accent-subtle);
+}
+
+.notepad-empty {
+  background: color-mix(in srgb, var(--surface-elevated) 70%, transparent);
+}
+
+.notepad-add-button {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 1px solid var(--foreground);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--foreground);
+  transition: transform var(--motion-duration-fast) var(--motion-ease), background-color var(--motion-duration-fast) var(--motion-ease);
+}
+
+.notepad-add-button:hover { transform: rotate(90deg); background: var(--accent-subtle); }
+
+.notepad-page {
+  position: relative;
+  overflow: hidden;
+  min-height: 25rem;
+  border: 1px solid color-mix(in srgb, var(--foreground) 16%, var(--border));
+  border-radius: 1.35rem 1.35rem 1.8rem 1.8rem;
+  background-color: #faf8f1;
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 2.05rem, #d7cec1 2.05rem, #d7cec1 2.1rem);
+  box-shadow: 0 14px 28px rgb(17 17 17 / 10%), inset 0 -8px 0 rgb(17 17 17 / 5%);
+}
+
+.notepad-page::after {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3.25rem;
+  border-right: 1px solid #d8cfc2;
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 2.05rem, #d7cec1 2.05rem, #d7cec1 2.1rem);
+  content: "";
+  opacity: 0.7;
+}
+
+.notepad-page-holes {
+  position: absolute;
+  top: 0.75rem;
+  right: 2rem;
+  left: 2rem;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+}
+
+.notepad-page-holes i {
+  display: block;
+  width: 0.72rem;
+  height: 0.72rem;
+  border: 1px solid #b9b0a4;
+  border-radius: 0.12rem;
+  background: #292825;
+  box-shadow: 0 1px 0 #fff;
+}
+
+.notepad-page-title,
+.notepad-page-body {
+  border: 0;
+  background: transparent;
+  color: #292825;
+  outline: 0;
+}
+
+.notepad-page-title {
+  margin-left: 3rem;
+  padding: 0.45rem 0.5rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.notepad-page-body {
+  margin-left: 3rem;
+  padding: 0.3rem 0.5rem;
+  font-size: 1rem;
+  line-height: 2.1rem;
+}
+
+.notepad-page-title::placeholder,
+.notepad-page-body::placeholder { color: #8d857a; }
+
+.notepad-page-title:focus,
+.notepad-page-body:focus { box-shadow: 0 2px 0 #292825; }
+
+html[data-visual-mode="minimal"] .notepad-page { background-color: #fffefa; }
+
+.achievement-room-scene-wrap { position: relative; }
+.achievement-room-scene { position: relative; overflow: hidden; border: 1px solid var(--border); background: var(--hub-wall); box-shadow: var(--shadow-soft); }
+.achievement-room-scene svg { display: block; width: 100%; height: auto; min-height: 24rem; }
+.achievement-room-accessible-list { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.achievement-room-tooltip { position: absolute; z-index: 5; display: grid; min-width: 12rem; gap: 0.25rem; transform: translate(-50%, -100%); border: 1px solid var(--foreground); background: var(--surface); padding: 0.65rem 0.75rem; color: var(--foreground); box-shadow: var(--shadow-soft); font-size: 0.75rem; }
+.achievement-room-tooltip button { position: absolute; top: 0.25rem; right: 0.35rem; color: var(--foreground-muted); font-size: 0.65rem; }
+.achievement-room-tooltip strong { padding-right: 2rem; font-size: 0.85rem; }
+.achievement-room-tooltip span, .achievement-room-tooltip small { color: var(--foreground-muted); }
+.hub-line { fill: none; stroke: var(--hub-line); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.hub-line-heavy { fill: none; stroke: var(--hub-line); stroke-width: 3; vector-effect: non-scaling-stroke; }
+.hub-line-faint { stroke: var(--hub-muted-line); stroke-width: 1.25; }
+.hub-frame { fill: var(--hub-frame); stroke: var(--hub-line); stroke-width: 2; }
+.hub-frame-inner { fill: var(--hub-frame-inner); stroke: var(--hub-muted-line); stroke-width: 1.5; }
+.hub-frame-shadow { fill: var(--hub-shadow); opacity: 0.28; }
+.hub-symbol { fill: none; stroke: var(--hub-accent); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.hub-interactive { cursor: pointer; outline: none; }
+.hub-interactive:hover .hub-frame-inner, .hub-interactive:focus .hub-frame-inner { stroke: var(--hub-accent); stroke-width: 2.5; }
+.hub-interactive:hover .hub-symbol, .hub-interactive:focus .hub-symbol { stroke-width: 4; }
+.hub-ground-shadow { fill: var(--hub-shadow); opacity: 0.3; filter: url(#hub-shadow); }
+.hub-desk-top { fill: var(--hub-desk-top); stroke: var(--hub-line); stroke-width: 2; }
+.hub-desk-front { fill: var(--hub-desk-front); stroke: var(--hub-line); stroke-width: 2; }
+.hub-desk-side { fill: var(--hub-desk-side); stroke: var(--hub-line); stroke-width: 2; }
+.hub-desk-drawer { fill: var(--hub-desk-drawer); stroke: var(--hub-line); stroke-width: 1.5; }
+.hub-artifact { stroke: var(--hub-accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.hub-artifact-boss { fill: var(--hub-artifact-dark); }
+.hub-artifact-core { fill: var(--hub-artifact-light); }
+.hub-artifact-mastery { fill: var(--hub-artifact-mid); }
+.hub-shelf-back { fill: var(--hub-shelf-back); stroke: var(--hub-line); stroke-width: 2; }
+.hub-shelf-top { fill: var(--hub-shelf); stroke: var(--hub-line); stroke-width: 2; }
+.hub-shelf-side { fill: var(--hub-shelf-side); stroke: var(--hub-line); stroke-width: 2; }
+.hub-shelf { fill: var(--hub-shelf); stroke: var(--hub-line); stroke-width: 2; }
+.hub-book { stroke: var(--hub-line); stroke-width: 1.5; }
+.hub-book-0 { fill: var(--hub-book-light); }
+.hub-book-1 { fill: var(--hub-book-mid); }
+.hub-book-2 { fill: var(--hub-book-dark); }
+.hub-book-3 { fill: var(--hub-book-warm); }
+.hub-book-line { stroke: var(--hub-muted-line); stroke-width: 1; }
+
+html {
+  --hub-wall: #f8f7f3;
+  --hub-wall-deep: #efeee9;
+  --hub-floor: #e9e8e2;
+  --hub-floor-deep: #deddd6;
+  --hub-line: #30302e;
+  --hub-muted-line: #b9b8b1;
+  --hub-shadow: #8d8c85;
+  --hub-frame: #d8d5cd;
+  --hub-frame-inner: #f6f5f0;
+  --hub-accent: #f12e54;
+  --hub-desk-top: #d0cec5;
+  --hub-desk-front: #bbb9b0;
+  --hub-desk-side: #c3c1b8;
+  --hub-desk-drawer: #c5c3ba;
+  --hub-artifact-dark: #4a4945;
+  --hub-artifact-mid: #8d8b84;
+  --hub-artifact-light: #f4f2ec;
+  --hub-shelf-back: #e1dfd7;
+  --hub-shelf-side: #ceccc3;
+  --hub-shelf: #cbc9c0;
+  --hub-book-light: #f2f0e9;
+  --hub-book-mid: #bbb9b0;
+  --hub-book-dark: #66655f;
+  --hub-book-warm: #d4cfc3;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

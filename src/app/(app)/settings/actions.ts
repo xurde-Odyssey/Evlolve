@@ -7,9 +7,13 @@ import {
   type BookaholicActivationInput,
   deactivateConfiguredActivityAuthoritatively,
   updateConfiguredActivityAuthoritatively,
+  createLearningTrackAuthoritatively,
+  completeLearningTrackAuthoritatively,
+  archiveLearningTrackAuthoritatively,
   saveWeeklyRemindersAuthoritatively,
   type WeeklyReminderInput,
   type ServerCommandResponse,
+  type LearningTrackInput,
 } from "@/application/evolve/server/commands";
 import type { EvolveServerActionResult } from "@/application/evolve/server/errors";
 import type { ActivityConfiguration } from "@/types/settings";
@@ -68,5 +72,33 @@ export async function saveWeeklyRemindersAction(
     revalidatePath("/quests");
     revalidatePath("/dashboard");
   }
+  return result;
+}
+
+export async function createLearningTrackAction(
+  input: LearningTrackInput,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  const result = await createLearningTrackAuthoritatively(input);
+  if (result.ok) {
+    revalidatePath("/settings");
+    revalidatePath("/activities");
+    revalidatePath("/dashboard");
+  }
+  return result;
+}
+
+export async function completeLearningTrackAction(
+  trackId: string,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  const result = await completeLearningTrackAuthoritatively(trackId);
+  if (result.ok) revalidatePath("/settings");
+  return result;
+}
+
+export async function archiveLearningTrackAction(
+  trackId: string,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  const result = await archiveLearningTrackAuthoritatively(trackId);
+  if (result.ok) revalidatePath("/settings");
   return result;
 }

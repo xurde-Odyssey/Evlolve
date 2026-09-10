@@ -18,6 +18,15 @@ import {
 import { activityDefinitions } from "../../config/activity-definitions";
 import type { ActivityRecord } from "../../types/activity";
 import type { WeeklyReminder } from "../../types/weekly-reminder";
+import type {
+  LearningMilestoneStatus,
+  LearningTrack,
+  LearningTrackStatus,
+  LearningTrackType,
+} from "../../types/learning-track";
+import type { MajorMilestoneTargetDays } from "../../types/major-milestone";
+import type { NotepadColor, NotepadNote } from "../../types/notepad";
+import { createMajorMilestone, refreshMajorMilestones } from "./major-milestones";
 import { createMemoryEvolveRepositories, type EvolveLocalRepositories } from "./repositories";
 import {
   deadlineStateForRequirement,
@@ -47,6 +56,12 @@ export function createEvolveApplication(initialState: EvolveLocalState) {
       rejectBossChallenge(repositories, boss, rejectedAt),
     createSeriousCommitment: (commitment: GrowthCommitment) =>
       createSeriousCommitment(repositories, commitment),
+    createLearningTrack: (input: CreateLearningTrackInput) =>
+      createLearningTrack(repositories, input),
+    completeLearningTrack: (trackId: string) =>
+      setLearningTrackStatus(repositories, trackId, "completed"),
+    archiveLearningTrack: (trackId: string) =>
+      setLearningTrackStatus(repositories, trackId, "archived"),
     acceptTargetRecommendation: (
       recommendation: TargetProgressionRecommendation,
       acceptedAt: string,
@@ -55,6 +70,10 @@ export function createEvolveApplication(initialState: EvolveLocalState) {
       rejectRecommendation(repositories, recommendation, rejectedAt),
     runWeeklyCloseout: (anchorDate: string) => runWeeklyCloseout(repositories, anchorDate),
     runMonthlyCloseout: (anchorDate: string) => runMonthlyCloseout(repositories, anchorDate),
+    createMajorMilestone: (input: CreateMajorMilestoneInput) => createMajorMilestoneCommand(repositories, input),
+    createNotepadNote: (input: CreateNotepadNoteInput) => createNotepadNote(repositories, input),
+    updateNotepadNote: (id: string, input: UpdateNotepadNoteInput) => updateNotepadNote(repositories, id, input),
+    deleteNotepadNote: (id: string) => deleteNotepadNote(repositories, id),
   };
 }
 
@@ -71,12 +90,17 @@ export function logActivity(
     throw new EvolveCommandError("INVALID_ACTIVITY", "Exercise details only apply to Workout logs.");
   }
   const unit = input.unit ?? definition?.measurementOptions.find((item) => item.type === input.measurementType)?.unit;
+  const activeLearningTrack = input.activityKey === "coding"
+    ? state.learningTracks.find((track) => track.status === "active")
+    : undefined;
   const record: ActivityRecord = {
     id: `activity:${input.activityKey}:${input.exercise ?? "general"}:${input.occurredAt}:${input.value ?? "completed"}`,
     idempotencyKey: input.idempotencyKey,
     activityKey: input.activityKey,
     activityLabel: workoutRecordLabel(definition?.label ?? input.activityKey, input.exercise),
     exercise: input.exercise,
+    learningTrackId: input.learningTrackId ?? activeLearningTrack?.id,
+    learningMilestoneId: input.learningMilestoneId ?? activeLearningTrack?.currentMilestoneId,
     measurement: {
       type: input.measurementType,
       value: input.value,
@@ -139,7 +163,7 @@ export function logActivity(
     books: nextBooks,
   };
 
-  repositories.replaceState(nextState);
+  repositories.replaceState(refreshMajorMilestones(nextState));
 
   return {
     state: nextState,
@@ -150,6 +174,181 @@ export function logActivity(
       ["FULL", "QUALIFYING_PARTIAL"].includes(item.executionState),
     ).length,
   };
+}
+
+export type CreateLearningTrackInput = {
+  title: string;
+  type: LearningTrackType;
+  provider?: string;
+  startedAt?: string;
+  targetCompletionDate?: string;
+  milestones?: Array<{ title: string }>;
+};
+
+export type CreateMajorMilestoneInput = {
+  title: string;
+  commitmentId: string;
+  targetDays?: MajorMilestoneTargetDays;
+};
+
+export type CreateNotepadNoteInput = {
+  title: string;
+  body: string;
+  color?: NotepadColor;
+};
+
+export type UpdateNotepadNoteInput = Partial<CreateNotepadNoteInput>;
+
+export function createNotepadNote(
+  repositories: EvolveLocalRepositories,
+  input: CreateNotepadNoteInput,
+) {
+  const state = repositories.getState();
+  const now = state.now;
+  const note: NotepadNote = {
+    id: `notepad:${crypto.randomUUID()}`,
+    title: input.title.trim() || "Untitled note",
+    body: input.body.trim(),
+    color: input.color ?? "paper",
+    createdAt: now,
+    updatedAt: now,
+  };
+  repositories.replaceState({ ...state, notepadNotes: [note, ...state.notepadNotes] });
+  return note;
+}
+
+export function updateNotepadNote(
+  repositories: EvolveLocalRepositories,
+  id: string,
+  input: UpdateNotepadNoteInput,
+) {
+  const state = repositories.getState();
+  const existing = state.notepadNotes.find((note) => note.id === id);
+  if (!existing) throw new EvolveCommandError("INVALID_ACTIVITY", "Note not found.");
+  const note = {
+    ...existing,
+    title: input.title === undefined ? existing.title : input.title.trim() || "Untitled note",
+    body: input.body === undefined ? existing.body : input.body.trim(),
+    color: input.color ?? existing.color,
+    updatedAt: state.now,
+  };
+  repositories.replaceState({
+    ...state,
+    notepadNotes: state.notepadNotes.map((item) => item.id === id ? note : item),
+  });
+  return note;
+}
+
+export function deleteNotepadNote(repositories: EvolveLocalRepositories, id: string) {
+  const state = repositories.getState();
+  repositories.replaceState({ ...state, notepadNotes: state.notepadNotes.filter((note) => note.id !== id) });
+}
+
+export function createMajorMilestoneCommand(
+  repositories: EvolveLocalRepositories,
+  input: CreateMajorMilestoneInput,
+) {
+  const state = repositories.getState();
+  const milestone = createMajorMilestone(state, input);
+  repositories.replaceState({ ...state, majorMilestones: [...state.majorMilestones, milestone] });
+  return milestone;
+}
+
+export function createLearningTrack(
+  repositories: EvolveLocalRepositories,
+  input: CreateLearningTrackInput,
+) {
+  const state = repositories.getState();
+  const commitment = state.commitments.find(
+    (item) => item.activityKey === "coding" && item.status === "active",
+  );
+  if (!commitment) throw new EvolveCommandError("INVALID_ACTIVITY", "Activate Learning before creating a track.");
+  if (state.learningTracks.some((track) => track.commitmentId === commitment.id && track.status === "active")) {
+    throw new EvolveCommandError("INVALID_ACTIVITY", "Complete or archive the current Learning track first.");
+  }
+
+  const startedAt = input.startedAt ?? state.now;
+  const title = input.title.trim();
+  if (!title) throw new EvolveCommandError("INVALID_ACTIVITY", "A Learning track title is required.");
+  const track: LearningTrack = {
+    id: `learning-track:${commitment.id}:${crypto.randomUUID()}`,
+    commitmentId: commitment.id,
+    title,
+    type: input.type,
+    provider: input.provider?.trim() || undefined,
+    startedAt,
+    targetCompletionDate: input.targetCompletionDate,
+    status: "active",
+    milestones: (input.milestones ?? []).map((milestone, index) => {
+      const status: LearningMilestoneStatus = index === 0 ? "in_progress" : "pending";
+      return {
+        id: `learning-milestone:${crypto.randomUUID()}`,
+        title: milestone.title.trim(),
+        position: index + 1,
+        status,
+      };
+    }).filter((milestone) => milestone.title.length > 0),
+  };
+  track.currentMilestoneId = track.milestones[0]?.id;
+  repositories.replaceState({ ...state, learningTracks: [...state.learningTracks, track] });
+  return track;
+}
+
+export function setLearningTrackStatus(
+  repositories: EvolveLocalRepositories,
+  trackId: string,
+  status: Extract<LearningTrackStatus, "completed" | "archived">,
+) {
+  const state = repositories.getState();
+  const track = state.learningTracks.find((item) => item.id === trackId);
+  if (!track) throw new EvolveCommandError("INVALID_ACTIVITY", "Learning track not found.");
+  if (status === "completed" && track.status === "completed") return track;
+
+  const meaningfulCompletion = state.activityRecords.some((record) => record.learningTrackId === track.id)
+    || track.milestones.some((milestone) => milestone.status === "completed");
+  const completedAt = status === "completed" ? state.now : track.completedAt;
+  const nextTrack = {
+    ...track,
+    status,
+    completedAt,
+    archivedAt: status === "archived" ? state.now : track.archivedAt,
+    milestones: status === "completed"
+      ? track.milestones.map((milestone) => ({ ...milestone, status: "completed" as const, completedAt: milestone.completedAt ?? state.now }))
+      : track.milestones,
+  };
+  const achievements = status === "completed" && meaningfulCompletion && !state.achievements.some((award) => award.key === `LEARNING_TRACK_COMPLETED:${track.id}`)
+    ? [...state.achievements, {
+        id: `achievement-learning-track-${track.id}`,
+        definitionId: "learning-track-completed",
+        key: `LEARNING_TRACK_COMPLETED:${track.id}`,
+        name: `${track.title} completed`,
+        category: "MILESTONE" as const,
+        major: true,
+        earnedAt: state.now,
+        supportingEvidence: [track.id, ...track.milestones.map((milestone) => milestone.id)],
+        policyVersion: "phase-6-learning-tracks",
+      }]
+    : state.achievements;
+  const journeyEvents = status === "completed" && meaningfulCompletion && !state.journeyEvents.some((event) => event.sourceId === track.id)
+    ? [...state.journeyEvents, {
+        id: `journey-learning-track-${track.id}`,
+        type: "MAJOR_SKILL_MILESTONE" as const,
+        occurredAt: state.now,
+        title: `${track.title} completed`,
+        description: "A Learning track was completed.",
+        sourceId: track.id,
+        evidenceRefs: [track.id, ...track.milestones.map((milestone) => milestone.id)],
+        policyVersion: "phase-6-learning-tracks",
+      }]
+    : state.journeyEvents;
+
+  repositories.replaceState({
+    ...state,
+    learningTracks: state.learningTracks.map((item) => item.id === trackId ? nextTrack : item),
+    achievements,
+    journeyEvents,
+  });
+  return nextTrack;
 }
 
 function isWorkoutExercise(value: string): value is NonNullable<ActivityLogInput["exercise"]> {
@@ -364,9 +563,9 @@ export function runWeeklyCloseout(
       : state.weeklySnapshots,
   };
 
-  repositories.replaceState(nextState);
+  repositories.replaceState(refreshMajorMilestones(nextState));
 
-  return nextState;
+  return repositories.getState();
 }
 
 export function runMonthlyCloseout(
@@ -404,9 +603,9 @@ export function runMonthlyCloseout(
       : state.monthlySnapshots,
   };
 
-  repositories.replaceState(nextState);
+  repositories.replaceState(refreshMajorMilestones(nextState));
 
-  return nextState;
+  return repositories.getState();
 }
 
 function createEvidenceForRequirement(

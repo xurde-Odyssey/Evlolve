@@ -8,6 +8,7 @@ import { defaultRecommendationEnginePolicy } from "../recommendation/engine";
 import { defaultTargetProgressionPolicy } from "../target/progression";
 import { defaultXpPolicy } from "../xp/policy";
 import { defaultAdaptiveIntelligencePolicy } from "../adaptive/policy";
+import { defaultMajorMilestonePolicy } from "../milestones/policy";
 import type { SimulationPolicyOverrides, SimulationPolicySet } from "./types";
 
 export const evolveEnginePolicyRegistry = {
@@ -44,6 +45,10 @@ export const evolveEnginePolicyRegistry = {
     commitmentCapacity: {
       owner: "domain/evolve-engine/capacity",
       policy: defaultCommitmentCapacityPolicy,
+    },
+    majorMilestones: {
+      owner: "domain/evolve-engine/milestones",
+      policy: defaultMajorMilestonePolicy,
     },
   },
   invariants: [

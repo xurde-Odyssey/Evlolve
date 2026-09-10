@@ -35,6 +35,7 @@ import type { DailyExecutionSnapshot, DailyExecutionStatus } from "../../types/d
 import type { ImprovementArea, ImprovementSnapshot } from "../../types/improvement";
 import type { JourneyMilestone, JourneySnapshot } from "../../types/journey";
 import type { ProfileSnapshot } from "../../types/profile";
+import { getMajorMilestoneProgress } from "./major-milestones";
 import type { DailyQuest, QuestStatus } from "../../types/quest";
 import type { PeriodReport, ReportsSnapshot } from "../../types/report";
 import type { WeeklyReminderSnapshot } from "../../types/weekly-reminder";
@@ -336,7 +337,7 @@ export function getConsistencyViewModel(
 
     return {
       activityKey: activityState.activityId as ConsistencySnapshot["activityStreaks"][number]["activityKey"],
-      activityLabel: activityLabel(String(activityState.activityId)),
+      activityLabel: activityLabel(String(activityState.activityId), state),
       currentStreak: current.current,
       bestStreak: current.best,
       status: commitment?.inactiveUntil ? "inactive" : "active",
@@ -436,7 +437,7 @@ export function getBossViewModel(
       title: boss.title,
       description: undefined,
       activityKey: (requirement?.activityId ?? "custom") as BossChallenge["activityKey"],
-      activityLabel: activityLabel(String(requirement?.activityId ?? "custom")),
+      activityLabel: activityLabel(String(requirement?.activityId ?? "custom"), state),
       evaluationType: "single_value",
       measurement: {
         type: "distance",
@@ -465,7 +466,7 @@ export function getBossViewModel(
       title: candidate.title,
       description: undefined,
       activityKey: (requirement?.activityId ?? "custom") as BossChallenge["activityKey"],
-      activityLabel: activityLabel(String(requirement?.activityId ?? "custom")),
+      activityLabel: activityLabel(String(requirement?.activityId ?? "custom"), state),
       evaluationType: "single_value",
       measurement: {
         type: "distance",
@@ -586,7 +587,7 @@ export function getReportsViewModel(
     },
     activities: projection.activityStates.map((activityState) => ({
       activityKey: activityState.activityId as PeriodReport["activities"][number]["activityKey"],
-      activityLabel: activityLabel(String(activityState.activityId)),
+      activityLabel: activityLabel(String(activityState.activityId), state),
       measurementType: "completion",
       primaryMetric: {
         label: "Output",
@@ -614,7 +615,7 @@ export function getReportsViewModel(
       overallPercent: weekly.consistencyPercentage,
       items: projection.activityStates.map((activityState) => ({
         activityKey: activityState.activityId as PeriodReport["consistency"]["items"][number]["activityKey"],
-        activityLabel: activityLabel(String(activityState.activityId)),
+        activityLabel: activityLabel(String(activityState.activityId), state),
         consistencyPercent: Math.round((activityState.consistency.value ?? 0) * 100),
         currentStreak: streakForActivity(state, String(activityState.activityId)).current,
         bestStreak: streakForActivity(state, String(activityState.activityId)).best,
@@ -649,7 +650,7 @@ export function getReportsViewModel(
     },
     baseline: projection.activityStates.map((activityState) => ({
       activityKey: activityState.activityId as PeriodReport["baseline"][number]["activityKey"],
-      activityLabel: activityLabel(String(activityState.activityId)),
+      activityLabel: activityLabel(String(activityState.activityId), state),
       observationLabel: statusLabel(activityState.capability.baselineState),
     })),
     systemAnalysis: {
@@ -708,13 +709,20 @@ export function getProfileViewModel(
       disciplineLabel: projection.coreWeaknesses.length > 0 ? "Rebuilding core consistency" : "Stable recent execution",
       activityConsistency: projection.activityStates.map((activityState) => ({
         activityKey: activityState.activityId as ProfileSnapshot["consistency"]["activityConsistency"][number]["activityKey"],
-        activityLabel: activityLabel(String(activityState.activityId)),
+        activityLabel: activityLabel(String(activityState.activityId), state),
         consistencyPercent: Math.round((activityState.consistency.value ?? 0) * 100),
       })),
     },
     currentDevelopment: state.commitments
       .filter((commitment): commitment is typeof commitment & { tier: "core" | "priority" } => commitment.status === "active" && commitment.tier !== "flexible")
       .map((commitment) => ({ id: commitment.id, title: commitmentDisplayTitle(commitment), tier: commitment.tier })),
+    milestoneCommitments: state.commitments
+      .filter((commitment) => commitment.status === "active")
+      .map((commitment) => ({
+        id: commitment.id,
+        title: commitmentDisplayTitle(commitment),
+        activityKey: commitment.activityKey as ActivityKey,
+      })),
     recentPerformance: getProgressSnapshotAttributes(state, projection).map((attribute) => ({
       id: attribute.key,
       label: attribute.label,
@@ -728,7 +736,7 @@ export function getProfileViewModel(
     ],
     records: projection.activityStates.map((activityState) => ({
       id: `record:${activityState.activityId}`,
-      label: `${activityLabel(String(activityState.activityId))} peak`,
+      label: `${activityLabel(String(activityState.activityId), state)} peak`,
       value: activityState.capability.peakCapability.value === null ? "Building" : String(round(activityState.capability.peakCapability.value)),
     })),
     monthlyAnalysis: {
@@ -737,14 +745,14 @@ export function getProfileViewModel(
       strongestAreas: adaptive.analysis.strongestDevelopment.slice(0, 3).map((activityId) => ({
         id: `strong:${activityId}`,
         activityKey: activityId as ActivityKey,
-        title: activityLabel(activityId),
+        title: activityLabel(activityId, state),
         direction: "strong",
         evidence: ["Your recent capability and execution evidence support this as a stronger area."],
       })),
       weakAreas: (adaptive.analysis.primaryConstraint ? [adaptive.analysis.primaryConstraint] : analysis.weakestDevelopment).slice(0, 3).map((activityId) => ({
         id: `weak:${activityId}`,
         activityKey: activityId as ActivityKey,
-        title: activityLabel(activityId),
+        title: activityLabel(activityId, state),
         direction: "weak",
         evidence: ["Your recent evidence suggests this area should be stabilized before adding more load."],
       })),
@@ -755,6 +763,7 @@ export function getProfileViewModel(
       { id: "highest-level", label: "Highest Level", value: `Level ${projection.levelState.highestLevel.level}`, context: "Historical" },
       { id: "journey-events", label: "Journey milestones", value: String(getJourneyViewModel(state, projection).completedMilestoneCount), context: "Major events" },
     ],
+    majorMilestones: state.majorMilestones.map((milestone) => getMajorMilestoneProgress(state, milestone)),
   };
 }
 
@@ -1070,8 +1079,12 @@ function scheduleLabelForCommitment(commitment: { schedule: { type: string; time
   return commitment.schedule.weekdays?.join(" / ") ?? "Scheduled";
 }
 
-function activityLabel(activityId: string) {
-  return activityDefinitions.find((definition) => definition.key === activityId)?.label ?? activityId;
+function activityLabel(activityId: string, state?: EvolveLocalState) {
+  const baseLabel = activityDefinitions.find((definition) => definition.key === activityId)?.label ?? activityId;
+  if (activityId !== "coding" || !state) return baseLabel;
+
+  const activeTrack = state.learningTracks.find((track) => track.status === "active");
+  return activeTrack?.title ? `${baseLabel} · ${activeTrack.title}` : baseLabel;
 }
 
 export function commitmentDisplayTitle(commitment: EvolveLocalState["commitments"][number]) {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Bell,
   Ban,
+  Archive,
   BookOpen,
   BookOpenText,
   CheckCircle2,
@@ -51,8 +52,10 @@ import type {
   Weekday,
 } from "@/types/settings";
 import type { WeeklyReminder } from "@/types/weekly-reminder";
+import type { LearningTrack } from "@/types/learning-track";
 import type {
   BookaholicActivationInput,
+  LearningTrackInput,
   ServerCommandResponse,
   WeeklyReminderInput,
 } from "@/application/evolve/server/commands";
@@ -74,6 +77,16 @@ type SettingsWorkspaceProps = {
   ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
   saveWeeklyRemindersAction?: (
     reminders: WeeklyReminderInput[],
+  ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  learningTracks: LearningTrack[];
+  createLearningTrackAction?: (
+    input: LearningTrackInput,
+  ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  completeLearningTrackAction?: (
+    trackId: string,
+  ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  archiveLearningTrackAction?: (
+    trackId: string,
   ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
 };
 
@@ -147,6 +160,10 @@ export function SettingsWorkspace({
   deactivateActivityAction,
   saveWeeklyRemindersAction,
   updateActivityAction,
+  learningTracks,
+  createLearningTrackAction,
+  completeLearningTrackAction,
+  archiveLearningTrackAction,
 }: SettingsWorkspaceProps) {
   const router = useRouter();
   const [activities, setActivities] = useState(snapshot.activityConfigurations);
@@ -432,6 +449,13 @@ export function SettingsWorkspace({
           setVisualMode(mode);
           saveVisualMode(mode);
         }}
+      />
+
+      <LearningTracksPanel
+        tracks={learningTracks}
+        onCreate={createLearningTrackAction}
+        onComplete={completeLearningTrackAction}
+        onArchive={archiveLearningTrackAction}
       />
 
       <div className="settings-primary-grid grid items-start gap-7 xl:grid-cols-[minmax(0,1.18fr)_minmax(20rem,0.82fr)]">
@@ -1006,6 +1030,133 @@ function VisualStylePanel({
         })}
       </div>
       <p className="text-xs text-[var(--foreground-muted)]">Applies instantly and does not change your Evolve data or progression.</p>
+    </Card>
+  );
+}
+
+function LearningTracksPanel({
+  tracks,
+  onCreate,
+  onComplete,
+  onArchive,
+}: {
+  tracks: LearningTrack[];
+  onCreate?: (input: LearningTrackInput) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  onComplete?: (trackId: string) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  onArchive?: (trackId: string) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+}) {
+  const [title, setTitle] = useState("");
+  const [type, setType] = useState<LearningTrackInput["type"]>("course");
+  const [provider, setProvider] = useState("");
+  const [targetCompletionDate, setTargetCompletionDate] = useState("");
+  const [milestones, setMilestones] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const activeTrack = tracks.find((track) => track.status === "active");
+
+  async function createTrack(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!onCreate || !title.trim() || isSaving) return;
+    setIsSaving(true);
+    setMessage(null);
+    const result = await onCreate({
+      title,
+      type,
+      provider,
+      targetCompletionDate: targetCompletionDate || undefined,
+      milestones: milestones.split("\n").map((item) => ({ title: item.trim() })).filter((item) => item.title),
+    });
+    if (result.ok) {
+      setTitle("");
+      setProvider("");
+      setTargetCompletionDate("");
+      setMilestones("");
+      setMessage("Learning track created.");
+    } else {
+      setMessage(result.message);
+    }
+    setIsSaving(false);
+  }
+
+  async function changeTrack(trackId: string, action: "complete" | "archive") {
+    const handler = action === "complete" ? onComplete : onArchive;
+    if (!handler || isSaving) return;
+    setIsSaving(true);
+    setMessage(null);
+    const result = await handler(trackId);
+    setMessage(result.ok ? action === "complete" ? "Learning track completed." : "Learning track archived." : result.message);
+    setIsSaving(false);
+  }
+
+  return (
+    <Card className="space-y-5">
+      <div className="flex items-start gap-3">
+        <BookOpen aria-hidden="true" className="mt-0.5 size-5 text-[var(--accent-pro)]" strokeWidth={1.8} />
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--foreground-muted)]">Learning tracks</p>
+          <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Give Learning a direction</h2>
+        </div>
+      </div>
+
+      {activeTrack ? (
+        <div className="rounded-md border border-[var(--border)] bg-[var(--surface-elevated)] p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-base font-semibold text-[var(--foreground)]">{activeTrack.title}</p>
+              <p className="mt-1 text-sm text-[var(--foreground-muted)]">
+                {activeTrack.provider ? `${activeTrack.provider} · ` : ""}{activeTrack.type}
+                {activeTrack.milestones.length ? ` · ${activeTrack.milestones.filter((item) => item.status === "completed").length}/${activeTrack.milestones.length} milestones` : ""}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button className="action-pill-outline gap-2" variant="ghost" type="button" disabled={isSaving} onClick={() => changeTrack(activeTrack.id, "archive")}>
+                <Archive aria-hidden="true" className="size-4" /> Archive
+              </Button>
+              <Button className="action-pill gap-2" type="button" disabled={isSaving} onClick={() => changeTrack(activeTrack.id, "complete")}>
+                {isSaving ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <CheckCircle2 aria-hidden="true" className="size-4" />}
+                {isSaving ? "Saving..." : "Complete track"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <form className="grid gap-4 sm:grid-cols-2" onSubmit={createTrack}>
+          <label className="space-y-2 text-sm font-semibold text-[var(--foreground)] sm:col-span-2">
+            <span>What are you learning?</span>
+            <input className="min-h-11 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="IBM Data Science, Spanish, Chess..." required />
+          </label>
+          <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
+            <span>Type</span>
+            <select className="min-h-11 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm" value={type} onChange={(event) => setType(event.target.value as LearningTrackInput["type"])}>
+              <option value="course">Course</option>
+              <option value="certification">Certification</option>
+              <option value="skill">Skill</option>
+              <option value="language">Language</option>
+              <option value="hobby">Hobby</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+          <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
+            <span>Provider <span className="font-normal text-[var(--foreground-muted)]">optional</span></span>
+            <input className="min-h-11 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm" value={provider} onChange={(event) => setProvider(event.target.value)} placeholder="IBM, Coursera..." />
+          </label>
+          <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
+            <span>Target date <span className="font-normal text-[var(--foreground-muted)]">optional</span></span>
+            <input className="min-h-11 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm" type="date" value={targetCompletionDate} onChange={(event) => setTargetCompletionDate(event.target.value)} />
+          </label>
+          <label className="space-y-2 text-sm font-semibold text-[var(--foreground)]">
+            <span>Milestones <span className="font-normal text-[var(--foreground-muted)]">one per line, optional</span></span>
+            <textarea className="min-h-24 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm" value={milestones} onChange={(event) => setMilestones(event.target.value)} placeholder="Python basics\nSQL fundamentals\nFinal project" />
+          </label>
+          <div className="flex items-end sm:col-span-2">
+            <Button className="action-pill gap-2" type="submit" disabled={isSaving || !onCreate}>
+              {isSaving ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <Plus aria-hidden="true" className="size-4" />}
+              {isSaving ? "Saving..." : "Start Learning Track"}
+            </Button>
+          </div>
+        </form>
+      )}
+      {message ? <p className="text-sm font-semibold text-[var(--foreground-muted)]" role="status">{message}</p> : null}
     </Card>
   );
 }

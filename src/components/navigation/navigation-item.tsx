@@ -44,12 +44,13 @@ export function NavigationItem({
             "grid size-6 place-items-center rounded-md transition [transition-duration:var(--motion-duration-fast)] [transition-timing-function:var(--motion-ease)]",
             isActive && "text-[var(--accent-pro)]",
             isEmphasized &&
-              "size-10 border border-[var(--emphasis-border)] bg-[var(--accent-pro)] text-white shadow-[var(--shadow-soft)] group-active:scale-95",
+              "size-10 border border-[var(--emphasis-border)] bg-[var(--accent-pro)] !text-white shadow-[var(--shadow-soft)] group-active:scale-95",
           )}
         >
           <NavigationIcon
             name={icon}
-            className={cn("size-4", isEmphasized && "size-5")}
+            className={cn("size-4", isEmphasized && "size-[1.35rem] !text-white")}
+            strokeWidth={isEmphasized ? 2.7 : 1.9}
           />
         </span>
         <span className="max-w-full truncate">{label}</span>
@@ -68,7 +69,7 @@ export function NavigationItem({
         )}
       >
         <span className="grid size-6 shrink-0 place-items-center rounded-md bg-[var(--accent-pro)] text-white transition group-active:scale-95 [transition-duration:var(--motion-duration-fast)] [transition-timing-function:var(--motion-ease)]">
-          <NavigationIcon name={icon} className="size-4" />
+          <NavigationIcon name={icon} className="size-[1.15rem] !text-white" strokeWidth={2.7} />
         </span>
         <span className="truncate">{label}</span>
       </Link>

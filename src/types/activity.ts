@@ -51,6 +51,8 @@ export type ActivityRecord = {
     unit?: string;
   };
   exercise?: WorkoutExercise;
+  learningTrackId?: string;
+  learningMilestoneId?: string;
   notes?: string;
   occurredAt: string;
   status: "completed";

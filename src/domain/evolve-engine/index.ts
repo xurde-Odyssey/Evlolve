@@ -30,6 +30,7 @@ export * from "./execution/consistency";
 export * from "./execution/policy";
 export * from "./gap/classifier";
 export * from "./journey/events";
+export * from "./milestones/policy";
 export * from "./orchestration/closeout";
 export * from "./pillars/core-weakness";
 export * from "./pillars/discipline";

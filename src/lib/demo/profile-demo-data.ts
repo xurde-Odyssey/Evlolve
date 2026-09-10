@@ -216,4 +216,6 @@ export const demoProfile = {
       context: "Lifetime",
     },
   ],
+  milestoneCommitments: [],
+  majorMilestones: [],
 } satisfies ProfileSnapshot;

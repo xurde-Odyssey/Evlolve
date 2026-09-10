@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   ListChecks,
   Plus,
+  StickyNote,
   Route,
   Settings,
   UserRound,
@@ -24,14 +25,16 @@ const icons: Record<NavigationIconName, LucideIcon> = {
   plus: Plus,
   quests: ListChecks,
   settings: Settings,
+  notepad: StickyNote,
 };
 
 type NavigationIconProps = {
   name: NavigationIconName;
   className?: string;
+  strokeWidth?: number;
 };
 
-export function NavigationIcon({ name, className }: NavigationIconProps) {
+export function NavigationIcon({ name, className, strokeWidth = 1.9 }: NavigationIconProps) {
   const Icon = icons[name];
 
   return (
@@ -39,7 +42,7 @@ export function NavigationIcon({ name, className }: NavigationIconProps) {
       aria-hidden="true"
       className={className}
       focusable="false"
-      strokeWidth={1.9}
+      strokeWidth={strokeWidth}
     />
   );
 }

@@ -1,4 +1,6 @@
 export * from "./commands";
+export * from "./achievement-hub";
+export * from "./major-milestones";
 export * from "./demo-state";
 export * from "./empty-state";
 export * from "./repositories";

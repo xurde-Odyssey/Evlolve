@@ -38,9 +38,9 @@ export const appRoutes: AppRoute[] = [
     icon: "boss",
   },
   {
-    href: "/achievements",
+    href: "/hub",
     label: "Achievements",
-    description: "Foundation route for future milestones.",
+    description: "Visual room for earned accomplishments.",
     icon: "award",
   },
   {
@@ -54,6 +54,12 @@ export const appRoutes: AppRoute[] = [
     label: "Settings",
     description: "Foundation route for future preferences.",
     icon: "settings",
+  },
+  {
+    href: "/notepad",
+    label: "Notepad",
+    description: "A quiet place for quick notes and working thoughts.",
+    icon: "notepad",
   },
 ];
 
@@ -83,7 +89,8 @@ export const primaryRoutes: AppRoute[] = [
 ];
 
 export const secondaryRoutes: AppRoute[] = [
-  getRoute("/achievements"),
+  getRoute("/hub"),
+  getRoute("/notepad"),
   getRoute("/settings"),
 ];
 

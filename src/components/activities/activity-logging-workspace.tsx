@@ -405,6 +405,11 @@ function ActivityLoggingSession({
             <p className="mt-1 text-sm text-[var(--foreground-muted)]">
               Commitment target: {selectedCommitment.targetValue} {selectedCommitment.unit}
             </p>
+            {selectedActivity.key === "coding" ? (
+              <p className="mt-2 text-sm font-semibold text-[var(--accent-pro)]">
+                Track: {appState.learningTracks.find((track) => track.status === "active")?.title ?? "No active Learning track"}
+              </p>
+            ) : null}
           </div>
 
           {selectedActivity.key === "workout" ? (

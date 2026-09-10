@@ -22,6 +22,9 @@ import type {
 } from "@/domain/evolve-engine";
 import type { ActivityRecord } from "@/types/activity";
 import type { Book } from "@/types/book";
+import type { LearningTrack } from "@/types/learning-track";
+import type { MajorMilestone } from "@/types/major-milestone";
+import type { NotepadNote } from "@/types/notepad";
 import type { WeeklyReminder } from "@/types/weekly-reminder";
 import { toJson, fromJson, type Json } from "./json";
 import {
@@ -39,6 +42,9 @@ import {
   weeklyReminderToRow,
   weeklySnapshotToRow,
   scheduledRequirementToRow,
+  learningTrackToRow,
+  majorMilestoneToRow,
+  notepadNoteToRow,
   type DomainIdRow,
   type PayloadRow,
 } from "./evolve-mappers";
@@ -125,6 +131,9 @@ export class SupabaseEvolveStateRepository {
       xpLedger,
       weeklyReminders,
       books,
+      learningTracks,
+      majorMilestones,
+      notepadNotes,
       activeBosses,
       recommendations,
       achievements,
@@ -141,6 +150,9 @@ export class SupabaseEvolveStateRepository {
       this.selectPayloads<XpTransaction>("xp_transactions", userId),
       this.selectPayloads<WeeklyReminder>("weekly_reminders", userId),
       this.selectPayloads<Book>("books", userId),
+      this.selectPayloads<LearningTrack>("learning_tracks", userId),
+      this.selectPayloads<MajorMilestone>("major_milestones", userId),
+      this.selectPayloads<NotepadNote>("notepad_notes", userId),
       this.selectPayloads<BossContract>("boss_challenges", userId),
       this.selectPayloads<RecommendationHistoryRecord>("recommendations", userId),
       this.selectPayloads<AchievementAward>("achievement_awards", userId),
@@ -173,6 +185,9 @@ export class SupabaseEvolveStateRepository {
       xpLedger,
       weeklyReminders,
       books,
+      learningTracks,
+      majorMilestones,
+      notepadNotes,
       activeBosses: activeBosses.filter((boss) =>
         ["OFFERED", "ACCEPTED", "IN_PROGRESS"].includes(boss.status),
       ),
@@ -206,6 +221,58 @@ export class SupabaseEvolveStateRepository {
     await this.ensureProfile(userId, state.timePolicy.timezone);
     const commitmentIdMap = await this.persistCommitments(userId, state.commitments);
     await this.persistScheduledRequirements(userId, state, commitmentIdMap);
+    await this.upsertPayloadRows(
+      "learning_tracks",
+      state.learningTracks
+        .map((track) => ({
+          track,
+          commitmentDbId: commitmentIdMap.commitmentIds.get(track.commitmentId),
+        }))
+        .filter((item): item is { track: EvolveLocalState["learningTracks"][number]; commitmentDbId: string } =>
+          Boolean(item.commitmentDbId),
+        )
+        .map((item) => learningTrackToRow({ userId, ...item })),
+      "user_id,domain_id",
+    );
+    await this.upsertPayloadRows(
+      "major_milestones",
+      state.majorMilestones
+        .map((milestone) => ({
+          milestone,
+          commitmentDbId: commitmentIdMap.commitmentIds.get(milestone.commitmentId),
+        }))
+        .filter((item): item is { milestone: EvolveLocalState["majorMilestones"][number]; commitmentDbId: string } =>
+          Boolean(item.commitmentDbId),
+        )
+        .map((item) => majorMilestoneToRow(userId, item.milestone, item.commitmentDbId)),
+      "user_id,domain_id",
+    );
+    await this.upsertPayloadRows(
+      "notepad_notes",
+      state.notepadNotes.map((note) => notepadNoteToRow(userId, note)),
+      "user_id,domain_id",
+    );
+    const noteDelete = this.client
+      .from("notepad_notes")
+      .delete()
+      .eq("user_id", userId);
+    if (state.notepadNotes.length > 0) {
+      noteDelete.not(
+        "domain_id",
+        "in",
+        `(${state.notepadNotes.map((note) => `'${note.id.replaceAll("'", "''")}'`).join(",")})`,
+      );
+    }
+    const noteDeleteResponse = await noteDelete;
+    throwIfError(noteDeleteResponse.error);
+    const learningTrackResponse = await this.client
+      .from("learning_tracks")
+      .select("id, domain_id")
+      .eq("user_id", userId);
+    throwIfError(learningTrackResponse.error);
+    const learningTrackIds = new Map(
+      ((learningTrackResponse.data ?? []) as DomainIdRow[]).map((row) => [row.domain_id, row.id]),
+    );
 
     const activityRows = state.activityRecords.map((record) =>
       activityRecordToRow({
@@ -220,6 +287,9 @@ export class SupabaseEvolveStateRepository {
           : undefined,
         scheduledRequirementDbId: record.scheduledRequirementId
           ? commitmentIdMap.requirementIds.get(record.scheduledRequirementId)
+          : undefined,
+        learningTrackDbId: record.learningTrackId
+          ? learningTrackIds.get(record.learningTrackId)
           : undefined,
       }),
     );
@@ -317,6 +387,25 @@ export class SupabaseEvolveStateRepository {
       this.persistProgressionState(userId, state),
       this.persistCapacityState(userId, state),
     ]);
+  }
+
+  async saveNotepadNote(userId: string, note: NotepadNote) {
+    await this.ensureProfile(userId);
+    await this.upsertPayloadRows(
+      "notepad_notes",
+      [notepadNoteToRow(userId, note)],
+      "user_id,domain_id",
+    );
+  }
+
+  async deleteNotepadNote(userId: string, noteId: string) {
+    const response = await this.client
+      .from("notepad_notes")
+      .delete()
+      .eq("user_id", userId)
+      .eq("domain_id", noteId);
+
+    throwIfError(response.error);
   }
 
   async recordCloseout({

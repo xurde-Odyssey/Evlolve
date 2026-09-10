@@ -4,6 +4,11 @@ import {
   createMemoryEvolveRepositories,
   completeWeeklyReminder,
   createSeriousCommitment,
+  createLearningTrack,
+  createMajorMilestoneCommand,
+  createNotepadNote,
+  updateNotepadNote,
+  deleteNotepadNote,
   getEngineProjection,
   getDashboardViewModel,
   logActivity,
@@ -13,6 +18,7 @@ import {
   rejectRecommendation,
   runMonthlyCloseout,
   runWeeklyCloseout,
+  setLearningTrackStatus,
   type ActivityLogInput,
   type GrowthCommitment,
 } from "@/application/evolve";
@@ -27,6 +33,10 @@ import type { ActivityConfiguration } from "@/types/settings";
 import type { Book } from "@/types/book";
 import type { WeeklyReminder } from "@/types/weekly-reminder";
 import type { Weekday } from "@/application/evolve/types";
+import type { CreateLearningTrackInput } from "@/application/evolve/commands";
+import type { CreateMajorMilestoneInput } from "@/application/evolve/commands";
+import type { CreateNotepadNoteInput, UpdateNotepadNoteInput } from "@/application/evolve/commands";
+import type { NotepadNote } from "@/types/notepad";
 import { getLocalDateKey } from "@/application/evolve/time-policy";
 import { evolveEnginePolicyRegistry } from "@/domain/evolve-engine/simulation/policy-registry";
 import { SupabaseEvolveStateRepository } from "@/infrastructure/supabase/evolve-state-repository";
@@ -52,6 +62,7 @@ export type ServerActivityLogResponse = {
 
 export type ServerCommandResponse = {
   dashboard: ReturnType<typeof getDashboardViewModel>;
+  notepadNote?: NotepadNote;
 };
 
 export type BookaholicActivationInput = {
@@ -70,6 +81,55 @@ export type ProfileUpdateInput = {
 };
 
 export type WeeklyReminderInput = Pick<WeeklyReminder, "id" | "title" | "enabled">;
+
+export type LearningTrackInput = CreateLearningTrackInput;
+export type MajorMilestoneInput = CreateMajorMilestoneInput;
+export type NotepadNoteInput = CreateNotepadNoteInput;
+export type NotepadNoteUpdateInput = UpdateNotepadNoteInput;
+
+export async function createNotepadNoteAuthoritatively(input: NotepadNoteInput): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  return mutateNotepadState((memory) => createNotepadNote(memory, input));
+}
+
+export async function updateNotepadNoteAuthoritatively(id: string, input: NotepadNoteUpdateInput): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  return mutateNotepadState((memory) => updateNotepadNote(memory, id, input));
+}
+
+export async function deleteNotepadNoteAuthoritatively(id: string): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  return mutateNotepadState((memory) => { deleteNotepadNote(memory, id); return id; }, id);
+}
+
+export async function createMajorMilestoneAuthoritatively(
+  input: MajorMilestoneInput,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  return mutateState((memory) => {
+    createMajorMilestoneCommand(memory, input);
+  });
+}
+
+export async function createLearningTrackAuthoritatively(
+  input: LearningTrackInput,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  return mutateState((memory) => {
+    createLearningTrack(memory, input);
+  });
+}
+
+export async function completeLearningTrackAuthoritatively(
+  trackId: string,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  return mutateState((memory) => {
+    setLearningTrackStatus(memory, trackId, "completed");
+  });
+}
+
+export async function archiveLearningTrackAuthoritatively(
+  trackId: string,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  return mutateState((memory) => {
+    setLearningTrackStatus(memory, trackId, "archived");
+  });
+}
 
 export async function logActivityAuthoritatively(
   input: ServerActivityLogInput,
@@ -503,7 +563,7 @@ async function requireAuthenticatedUser() {
 }
 
 async function mutateState(
-  mutate: (memory: ReturnType<typeof createMemoryEvolveRepositories>) => void,
+  mutate: (memory: ReturnType<typeof createMemoryEvolveRepositories>) => unknown,
 ): Promise<EvolveServerActionResult<ServerCommandResponse>> {
   if (!isSupabaseAuthorityConfigured()) {
     return errorResult("SUPABASE_NOT_CONFIGURED", "Supabase authority is not configured.");
@@ -516,13 +576,17 @@ async function mutateState(
     const repository = new SupabaseEvolveStateRepository(createSupabaseServiceClient());
     const state = await repository.loadState(user.id, new Date().toISOString());
     const memory = createMemoryEvolveRepositories(state);
-    mutate(memory);
+    const mutationResult = mutate(memory);
     const nextState = memory.getState();
     await repository.saveState(user.id, nextState);
 
-    return successResult({
+    const response: ServerCommandResponse = {
       dashboard: getDashboardViewModel(nextState),
-    });
+    };
+    if (mutationResult && typeof mutationResult === "object" && "id" in mutationResult) {
+      response.notepadNote = mutationResult as NotepadNote;
+    }
+    return successResult(response);
   } catch (error) {
     if (error instanceof Error && error.message.includes("capacity")) {
       return errorResult("CAPACITY_EXCEEDED", "Commitment capacity is full.");
@@ -535,6 +599,42 @@ async function mutateState(
       );
     }
 
+    return errorResult("FORBIDDEN", "Evolve state change was rejected.");
+  }
+}
+
+async function mutateNotepadState(
+  mutate: (memory: ReturnType<typeof createMemoryEvolveRepositories>) => unknown,
+  deletedNoteId?: string,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  if (!isSupabaseAuthorityConfigured()) {
+    return errorResult("SUPABASE_NOT_CONFIGURED", "Supabase authority is not configured.");
+  }
+
+  const user = await requireAuthenticatedUser();
+  if (!user) return errorResult("AUTH_REQUIRED", "Sign in before changing Evolve state.");
+
+  try {
+    const repository = new SupabaseEvolveStateRepository(createSupabaseServiceClient());
+    const state = await repository.loadState(user.id, new Date().toISOString());
+    const memory = createMemoryEvolveRepositories(state);
+    const mutationResult = mutate(memory);
+    const nextState = memory.getState();
+
+    if (deletedNoteId) {
+      await repository.deleteNotepadNote(user.id, deletedNoteId);
+    } else if (mutationResult && typeof mutationResult === "object" && "id" in mutationResult) {
+      await repository.saveNotepadNote(user.id, mutationResult as NotepadNote);
+    }
+
+    const response: ServerCommandResponse = {
+      dashboard: getDashboardViewModel(nextState),
+    };
+    if (!deletedNoteId && mutationResult && typeof mutationResult === "object" && "id" in mutationResult) {
+      response.notepadNote = mutationResult as NotepadNote;
+    }
+    return successResult(response);
+  } catch {
     return errorResult("FORBIDDEN", "Evolve state change was rejected.");
   }
 }

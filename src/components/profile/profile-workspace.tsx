@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import {
   Award,
@@ -35,17 +36,20 @@ import type {
   ProfileSnapshot,
 } from "@/types/profile";
 import type { ProfileUpdateInput, ServerCommandResponse } from "@/application/evolve/server/commands";
+import type { MajorMilestoneInput } from "@/application/evolve/server/commands";
 import type { EvolveServerActionResult } from "@/application/evolve/server/errors";
 
 type ProfileWorkspaceProps = {
   profile: ProfileSnapshot;
   updateProfileAction?: (input: ProfileUpdateInput) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
   selectTitleAction?: (titleId: string) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  createMajorMilestoneAction?: (input: MajorMilestoneInput) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
 };
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 
-export function ProfileWorkspace({ profile, updateProfileAction, selectTitleAction }: ProfileWorkspaceProps) {
+export function ProfileWorkspace({ profile, updateProfileAction, selectTitleAction, createMajorMilestoneAction }: ProfileWorkspaceProps) {
+  const router = useRouter();
   const [personal, setPersonal] = useState(profile.personal);
   const [draft, setDraft] = useState(profile.personal);
   const [titles, setTitles] = useState(profile.titles);
@@ -118,6 +122,13 @@ export function ProfileWorkspace({ profile, updateProfileAction, selectTitleActi
         onSelectTitle={selectTitle}
       />
 
+      <MajorMilestones
+        milestones={profile.majorMilestones}
+        commitments={profile.milestoneCommitments}
+        onCreate={createMajorMilestoneAction}
+        onCreated={() => router.refresh()}
+      />
+
       {isEditing ? (
         <ProfileEditForm
           draft={draft}
@@ -149,6 +160,96 @@ export function ProfileWorkspace({ profile, updateProfileAction, selectTitleActi
         <ProgressionHistory items={profile.progressionHistory} />
       </div>
     </div>
+  );
+}
+
+function MajorMilestones({
+  milestones,
+  commitments,
+  onCreate,
+  onCreated,
+}: {
+  milestones: ProfileSnapshot["majorMilestones"];
+  commitments: ProfileSnapshot["milestoneCommitments"];
+  onCreate?: (input: MajorMilestoneInput) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  onCreated: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [commitmentId, setCommitmentId] = useState(commitments[0]?.id ?? "");
+  const [targetDays, setTargetDays] = useState<MajorMilestoneInput["targetDays"]>(100);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const availableCommitments = commitments.filter(
+    (commitment) => !milestones.some((milestone) => milestone.commitmentId === commitment.id && milestone.status === "active"),
+  );
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!onCreate || !title.trim() || !commitmentId || saving) return;
+    setSaving(true);
+    setMessage(null);
+    const result = await onCreate({ title, commitmentId, targetDays });
+    if (result.ok) {
+      setTitle("");
+      setMessage("Major milestone started. Progress will come from sustained evidence.");
+      onCreated();
+    } else {
+      setMessage(result.message);
+    }
+    setSaving(false);
+  }
+
+  return (
+    <Card className="space-y-5">
+      <div className="flex items-start gap-3">
+        <Target aria-hidden="true" className="mt-0.5 size-5 text-[var(--accent-pro)]" strokeWidth={1.8} />
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--foreground-muted)]">Major milestones</p>
+          <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Long-term outcomes</h2>
+          <p className="mt-1 text-sm text-[var(--foreground-muted)]">Progress is earned through regular qualifying work, not manual completion.</p>
+        </div>
+      </div>
+
+      {milestones.length > 0 ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {milestones.map((milestone) => (
+            <div key={milestone.id} className="rounded-md border border-[var(--border)] bg-[var(--background)] p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-[var(--foreground)]">{milestone.title}</p>
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--foreground-muted)]">{milestone.activityKey === "coding" ? "Learning" : milestone.activityKey}</p>
+                </div>
+                <span className="text-xs font-semibold text-[var(--foreground-muted)]">{milestone.status === "completed" ? "Established" : `${milestone.progressPercent}%`}</span>
+              </div>
+              <div className="mt-4"><Progress value={milestone.progressPercent} /></div>
+              <div className="mt-2 flex justify-between gap-3 text-xs text-[var(--foreground-muted)]">
+                <span>{milestone.qualifyingDays} / {milestone.targetDays} qualifying days</span>
+                <span>{milestone.regularityPercent}% regularity</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {availableCommitments.length > 0 && onCreate ? (
+        <form className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(9rem,0.45fr)_auto]" onSubmit={submit}>
+          <input className="min-h-10 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)]" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Get a job, be in shape..." aria-label="Major milestone" required />
+          <select className="min-h-10 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)]" value={commitmentId} onChange={(event) => setCommitmentId(event.target.value)} aria-label="Milestone commitment">
+            {availableCommitments.map((commitment) => <option key={commitment.id} value={commitment.id}>{commitment.title}</option>)}
+          </select>
+          <select className="min-h-10 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)]" value={targetDays} onChange={(event) => setTargetDays(Number(event.target.value) as MajorMilestoneInput["targetDays"])} aria-label="Milestone duration">
+            <option value={100}>100 days</option>
+            <option value={150}>150 days</option>
+            <option value={200}>200 days</option>
+          </select>
+          <Button className="action-pill gap-2 sm:col-span-3" type="submit" disabled={saving}>
+            {saving ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <Target aria-hidden="true" className="size-4" />}
+            {saving ? "Saving..." : "Add major milestone"}
+          </Button>
+        </form>
+      ) : null}
+      {message ? <p className="text-sm font-semibold text-[var(--foreground-muted)]" role="status">{message}</p> : null}
+    </Card>
   );
 }
 

@@ -4,7 +4,7 @@ import { ProfileWorkspace } from "@/components/profile/profile-workspace";
 import { getProfileViewModel } from "@/application/evolve";
 import { getCurrentEvolveState } from "@/application/evolve/server/queries";
 import { isSupabaseAuthorityConfigured } from "@/lib/supabase/env";
-import { selectTitleAction, updateProfileAction } from "./actions";
+import { createMajorMilestoneAction, selectTitleAction, updateProfileAction } from "./actions";
 
 export default async function CharacterPage() {
   const state = await getCurrentEvolveState();
@@ -20,6 +20,7 @@ export default async function CharacterPage() {
         profile={getProfileViewModel(state)}
         updateProfileAction={isSupabaseAuthorityConfigured() ? updateProfileAction : undefined}
         selectTitleAction={isSupabaseAuthorityConfigured() ? selectTitleAction : undefined}
+        createMajorMilestoneAction={isSupabaseAuthorityConfigured() ? createMajorMilestoneAction : undefined}
       />
     </PageContainer>
   );

@@ -16,4 +16,5 @@ export type NavigationIcon =
   | "overview"
   | "plus"
   | "quests"
-  | "settings";
+  | "settings"
+  | "notepad";
