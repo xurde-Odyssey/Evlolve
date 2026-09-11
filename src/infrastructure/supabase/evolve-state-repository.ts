@@ -217,6 +217,76 @@ export class SupabaseEvolveStateRepository {
     };
   }
 
+  async loadDashboardState(userId: string, now = new Date().toISOString()): Promise<EvolveLocalState> {
+    const profile = await this.getProfile(userId);
+    const state = createEmptyEvolveState({
+      userId,
+      now,
+      timezone: profile?.timezone ?? defaultUserTimePolicy.timezone,
+    });
+    const recentSince = new Date(new Date(now).getTime() - 400 * 86_400_000).toISOString();
+
+    const [
+      commitments,
+      activityRecords,
+      evidence,
+      xpLedger,
+      weeklyReminders,
+      books,
+      activeBosses,
+      recommendations,
+      achievements,
+      titles,
+      progressionState,
+      capacityState,
+    ] = await Promise.all([
+      this.selectPayloads<GrowthCommitment>("growth_commitments", userId),
+      this.selectPayloadsSince<ActivityRecord>("activity_records", userId, "occurred_at", recentSince),
+      this.selectPayloadsSince<ActivityExecutionEvidence>("activity_execution_evidence", userId, "occurred_at", recentSince),
+      this.selectPayloads<XpTransaction>("xp_transactions", userId),
+      this.selectPayloads<WeeklyReminder>("weekly_reminders", userId),
+      this.selectPayloads<Book>("books", userId),
+      this.selectPayloads<BossContract>("boss_challenges", userId),
+      this.selectPayloads<RecommendationHistoryRecord>("recommendations", userId),
+      this.selectPayloads<AchievementAward>("achievement_awards", userId),
+      this.selectPayloads<EarnedTitleRecord>("title_awards", userId),
+      this.getProgressionState(userId),
+      this.getCapacityState(userId),
+    ]);
+
+    return {
+      ...state,
+      profile: profile ? {
+        displayName: profile.display_name ?? undefined,
+        age: profile.age ?? undefined,
+        heightCm: profile.height_cm ?? undefined,
+        weightKg: profile.weight_kg ?? undefined,
+        goals: Array.isArray(profile.goals)
+          ? profile.goals.filter((goal): goal is string => typeof goal === "string")
+          : [],
+        timezone: profile.timezone,
+        evolveSince: profile.evolve_since ?? undefined,
+        onboardingState: profile.onboarding_state,
+        selectedTitleId: profile.selected_title_id ?? undefined,
+      } : state.profile,
+      commitments,
+      activityRecords,
+      evidence,
+      xpLedger,
+      weeklyReminders,
+      books,
+      activeBosses: activeBosses.filter((boss) => ["OFFERED", "ACCEPTED", "IN_PROGRESS"].includes(boss.status)),
+      recommendations,
+      achievements,
+      titles,
+      currentLevel: progressionState?.currentLevel ?? state.currentLevel,
+      highestLevel: progressionState?.highestLevel ?? state.highestLevel,
+      candidate: progressionState?.candidate,
+      risk: progressionState?.risk,
+      capacity: capacityState ?? state.capacity,
+    };
+  }
+
   async saveState(userId: string, state: EvolveLocalState) {
     await this.ensureProfile(userId, state.timePolicy.timezone);
     const commitmentIdMap = await this.persistCommitments(userId, state.commitments);
@@ -482,6 +552,26 @@ export class SupabaseEvolveStateRepository {
       .from(table)
       .select("domain_payload")
       .eq("user_id", userId);
+
+    throwIfError(response.error);
+
+    const rows = (response.data ?? []) as PayloadRow[];
+    return rows
+      .map((row) => fromJson<TValue>(row.domain_payload))
+      .filter((item): item is TValue => item !== null);
+  }
+
+  private async selectPayloadsSince<TValue>(
+    table: string,
+    userId: string,
+    column: string,
+    since: string,
+  ): Promise<TValue[]> {
+    const response = await this.client
+      .from(table)
+      .select("domain_payload")
+      .eq("user_id", userId)
+      .gte(column, since);
 
     throwIfError(response.error);
 

@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { BookMetadata } from "@/types/book";
+import type { BookMetadata, BookQuote } from "@/types/book";
 
 type OpenLibrarySearchResponse = {
   docs?: Array<{
@@ -71,7 +71,7 @@ export async function lookupBookMetadata(title: string): Promise<BookMetadata | 
     const workId = match?.key?.startsWith("/works/")
       ? match.key.slice("/works/".length)
       : undefined;
-    const [author, works, wikipediaBio, quote] = await Promise.all([
+    const [author, works, wikipediaBio, quotes] = await Promise.all([
       authorId ? fetchOpenLibrary<OpenLibraryAuthor>(`https://openlibrary.org/authors/${authorId}.json`) : null,
       authorId ? fetchOpenLibrary<OpenLibraryWorksResponse>(`https://openlibrary.org/authors/${authorId}/works.json?limit=8`) : null,
       authorName ? fetchWikipediaBio(authorName) : null,
@@ -97,7 +97,8 @@ export async function lookupBookMetadata(title: string): Promise<BookMetadata | 
         wikipediaBio?.content_urls?.desktop?.page ??
         wikipediaBook?.content_urls?.desktop?.page ??
         googleBook?.infoLink,
-      quote: quote ?? undefined,
+      quote: quotes?.[0],
+      quotes: quotes?.length ? quotes : undefined,
       fetchedAt: new Date().toISOString(),
     };
   } catch {
@@ -189,8 +190,9 @@ async function fetchWikipediaBio(authorName: string) {
     : undefined;
 }
 
-async function fetchWikiquote(bookTitle: string, authorName?: string) {
+async function fetchWikiquote(bookTitle: string, authorName?: string): Promise<BookQuote[] | undefined> {
   const titles = [bookTitle, authorName].filter((value): value is string => Boolean(value));
+  const quotes: BookQuote[] = [];
 
   for (const title of titles) {
     const response = await fetchOpenLibrary<{
@@ -199,20 +201,22 @@ async function fetchWikiquote(bookTitle: string, authorName?: string) {
       `https://en.wikiquote.org/w/api.php?action=query&prop=extracts&explaintext=1&redirects=1&format=json&origin=*&titles=${encodeURIComponent(title)}`,
     );
     const extract = Object.values(response?.query?.pages ?? {})[0]?.extract;
-    const quoteLine = extract
+    const quoteLines = extract
       ?.split("\n")
       .map((line) => line.trim().replace(/^[-*]\s*/, ""))
-      .find((line) => /[“”\"]/.test(line) && line.length > 20 && line.length <= 240);
+      .filter((line) => /[“”\"]/.test(line) && line.length > 20 && line.length <= 240);
 
-    if (quoteLine) {
-      return {
-        text: quoteLine,
-        source: "Wikiquote",
-      };
+    for (const quoteLine of quoteLines ?? []) {
+      if (!quotes.some((quote) => quote.text === quoteLine)) {
+        quotes.push({
+          text: quoteLine,
+          source: "Wikiquote",
+        });
+      }
     }
   }
 
-  return undefined;
+  return quotes.length > 0 ? quotes.slice(0, 8) : undefined;
 }
 
 async function fetchOpenLibrary<T>(url: string): Promise<T | undefined> {

@@ -8,7 +8,7 @@ export default async function JourneyPage() {
   const state = await getCurrentEvolveState();
 
   return (
-    <PageContainer>
+    <PageContainer className="journey-page-surface">
       <PageHeader
         eyebrow="/journey"
         title="Your Journey"

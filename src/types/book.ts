@@ -1,5 +1,10 @@
 export type BookStatus = "reading" | "completed";
 
+export type BookQuote = {
+  text: string;
+  source: string;
+};
+
 export type BookMetadata = {
   source: "OPEN_LIBRARY" | "GOOGLE_BOOKS" | "WIKIMEDIA";
   workId?: string;
@@ -10,10 +15,8 @@ export type BookMetadata = {
   otherWorks: string[];
   coverUrl?: string;
   sourceUrl?: string;
-  quote?: {
-    text: string;
-    source: string;
-  };
+  quote?: BookQuote;
+  quotes?: BookQuote[];
   fetchedAt: string;
 };
 

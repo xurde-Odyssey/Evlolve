@@ -145,7 +145,7 @@ export function TodayExecution({ execution, completeWeeklyReminderAction }: Toda
   }
 
   return (
-    <Card className="relative space-y-5">
+    <Card className="relative space-y-4 overflow-hidden sm:space-y-5">
       {savingReminderId !== null ? (
         <div
           className="async-soft-overlay"
@@ -404,7 +404,7 @@ function TodayHeader({
           </h1>
         </div>
 
-        <div className="grid gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 sm:min-w-44">
+        <div className="grid w-full gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 sm:w-auto sm:min-w-44">
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">
               Current

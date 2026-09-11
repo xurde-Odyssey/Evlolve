@@ -583,3 +583,17 @@ codex resume 01a03c77-95f4-7a82-afdd-b00d13c4abfb
 - Live Supabase migration execution and two-user RLS denial tests were not run because no Supabase project/database credentials were provided in this environment.
 - Remaining Phase 4 deployment work: apply migrations to a real Supabase project, generate typed database definitions, run live RLS/security tests, deploy the scheduler/worker for due requirements and closeout catch-up, and decide final production transaction/RPC strategy for multi-row atomicity.
 - Phase 5 readiness statement: the app now has the backend boundary needed for full real-data product integration, but it is not ready to declare production backend complete until live migration/RLS tests pass against an actual Supabase project.
+
+
+
+
+
+  1. Inter
+      - Main app font for body text and modern mode.
+      - Example: Good afternoon, Dipesh
+      - Example: Current Level
+
+  3. Caveat
+      - Minimal mode headings with handwritten journal style.
+      - Example: Your Journey
+      - Example: Daily Quests

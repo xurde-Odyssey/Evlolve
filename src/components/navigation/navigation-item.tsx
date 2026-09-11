@@ -33,7 +33,7 @@ export function NavigationItem({
         className={cn(
           "group flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-center text-[0.68rem] font-medium text-[var(--foreground-muted)] transition hover:bg-[var(--muted)] hover:text-[var(--foreground)] active:scale-[0.99] focus-visible:outline-offset-0 min-[380px]:text-[0.72rem] [transition-duration:var(--motion-duration-fast)] [transition-timing-function:var(--motion-ease)]",
           isActive &&
-            "bg-[var(--surface-elevated)] text-[var(--foreground)]",
+            "bg-[var(--surface-elevated)] text-[var(--foreground)] shadow-[inset_0_-2px_0_var(--accent-pro)]",
           isEmphasized &&
             "min-h-14 bg-transparent text-[var(--foreground)] hover:bg-transparent",
         )}

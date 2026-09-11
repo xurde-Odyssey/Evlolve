@@ -38,7 +38,20 @@ export async function getCurrentEvolveState(): Promise<EvolveLocalState> {
 }
 
 export async function getDashboardQuery() {
-  return getDashboardViewModel(await getCurrentEvolveState());
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return getDashboardViewModel(createEmptyEvolveState({ userId: "unauthenticated" }));
+  }
+
+  const repository = new SupabaseEvolveStateRepository(createSupabaseServiceClient());
+  const configuredTimezone = stringMetadata(user.user_metadata.timezone);
+  const timezone = configuredTimezone === "UTC" || !configuredTimezone
+    ? defaultUserTimePolicy.timezone
+    : configuredTimezone;
+  await repository.ensureProfile(user.id, timezone);
+
+  return getDashboardViewModel(await repository.loadDashboardState(user.id));
 }
 
 function stringMetadata(value: unknown) {

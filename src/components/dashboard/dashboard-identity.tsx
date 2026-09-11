@@ -27,15 +27,15 @@ export function DashboardIdentity({ character }: DashboardIdentityProps) {
 
   return (
     <Card className="notebook-card overflow-hidden p-0">
-      <div className="p-5 sm:p-7">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--background)] shadow-[0_4px_12px_color-mix(in_srgb,var(--primary)_5%,transparent)]">
+      <div className="p-4 sm:p-7">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
+          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+            <div className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--background)] shadow-[0_4px_12px_color-mix(in_srgb,var(--primary)_5%,transparent)] sm:size-14">
               <CoreStone level={character.level} highestLevel={character.highestLevel} size="sm" />
             </div>
             <div className="min-w-0">
-              <p className="journal-copy truncate text-lg font-semibold text-[var(--foreground)] sm:text-xl">Good afternoon, {character.name}</p>
-              <p className="journal-copy mt-1 truncate text-sm italic text-[var(--foreground-muted)]">Continue evolving · {stage.key}</p>
+              <p className="journal-copy truncate text-base font-semibold text-[var(--foreground)] sm:text-xl">Good afternoon, {character.name}</p>
+              <p className="journal-copy mt-1 truncate text-xs italic text-[var(--foreground-muted)] sm:text-sm">Continue evolving · {stage.key}</p>
             </div>
           </div>
           <div className="hidden shrink-0 items-center gap-1.5 rounded-full border border-[var(--accent-pro)]/30 bg-[var(--accent-subtle)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-pro)] sm:flex">
@@ -44,7 +44,7 @@ export function DashboardIdentity({ character }: DashboardIdentityProps) {
           </div>
         </div>
 
-        <div className="my-6 border-t border-[var(--border)]" />
+        <div className="my-5 border-t border-[var(--border)] sm:my-6" />
 
         <div className="grid gap-5 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:items-center">
           <div>
@@ -58,7 +58,7 @@ export function DashboardIdentity({ character }: DashboardIdentityProps) {
             </div>
             <p className="mt-3 flex items-center gap-1.5 text-sm text-[var(--foreground-muted)] sm:hidden"><ArrowUpRight aria-hidden="true" className="size-3.5 text-[var(--accent-pro)]" />Current direction: <span className="font-semibold text-[var(--foreground)]">{character.levelStateLabel ?? "Stable"}</span></p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
             <InsightTile label="Current title" value={character.title ?? "Evolving"} />
             <InsightTile icon={Flame} label="Streak context" value={`${character.streakDays ?? 0} day streak`} detail={`Best ${character.bestStreakDays ?? 0} days`} />
           </div>
