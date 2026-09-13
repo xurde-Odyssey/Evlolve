@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server";
 import { getCommunicationContext } from "@/application/communication/server/auth";
+import { communicationActivityLogInput } from "@/application/communication/progression";
+import { logActivityAuthoritatively } from "@/application/evolve/server/commands";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ sessionId: string }> }) {
   const context = await getCommunicationContext();
   if (!context) return NextResponse.json({ error: "Sign in before completing phrase practice." }, { status: 401 });
-  try { return NextResponse.json({ session: await context.repository.completePractice(context.user.id, (await params).sessionId) }); } catch { return NextResponse.json({ error: "Phrase practice could not be completed." }, { status: 500 }); }
+  try {
+    const sessionId = (await params).sessionId;
+    const current = await context.repository.getPracticeSession(context.user.id, sessionId);
+    const session = await context.repository.completePractice(context.user.id, sessionId);
+    const durationSeconds = Math.max(0, Math.round((Date.now() - Date.parse(session.createdAt)) / 1000));
+    const activityInput = session.completed ? communicationActivityLogInput(session.id, { module: "PHRASE_PRACTICE", durationSeconds, meaningfulUnits: current.session.currentIndex, endedAt: new Date().toISOString() }) : null;
+    const outcome = activityInput ? await logActivityAuthoritatively(activityInput) : undefined;
+    return NextResponse.json({ session, progression: { credited: Boolean(outcome?.ok), xpAwarded: outcome?.ok ? outcome.data.xpAwarded : 0 } });
+  } catch { return NextResponse.json({ error: "Phrase practice could not be completed." }, { status: 500 }); }
 }

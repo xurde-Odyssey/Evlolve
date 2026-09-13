@@ -91,6 +91,13 @@ const activityConfigSeed: Record<
     adaptiveTargetLabel: "2.5 L",
     freezeEligible: false,
   },
+  communication: {
+    active: false,
+    measurementType: "completion",
+    schedule: { type: "times_per_week", timesPerWeek: 3 },
+    tier: "priority",
+    freezeEligible: false,
+  },
   custom: {
     active: false,
     measurementType: "duration",

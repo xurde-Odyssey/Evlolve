@@ -68,6 +68,7 @@ function createSettingsSnapshot(state: Awaited<ReturnType<typeof getCurrentEvolv
     meditation: { measurementType: "duration", schedule: { type: "times_per_week", timesPerWeek: 3 }, tier: "flexible", freezeEligible: false },
     sleep: { measurementType: "duration", schedule: { type: "daily" }, tier: "flexible", freezeEligible: false },
     water: { measurementType: "volume", schedule: { type: "daily" }, tier: "flexible", freezeEligible: false },
+    communication: { measurementType: "completion", schedule: { type: "times_per_week", timesPerWeek: 3 }, tier: "priority", freezeEligible: false },
     custom: { measurementType: "duration", schedule: { type: "times_per_week", timesPerWeek: 3 }, tier: "priority", freezeEligible: false },
   };
   const activeCommitments = state.commitments.filter((commitment) => commitment.status === "active");

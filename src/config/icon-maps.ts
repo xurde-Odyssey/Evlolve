@@ -9,6 +9,7 @@ import {
   Dumbbell,
   Footprints,
   Moon,
+  MessageCircle,
   XCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -22,6 +23,7 @@ export const activityIcons = {
   meditation: Brain,
   sleep: Moon,
   water: Droplets,
+  communication: MessageCircle,
   custom: Circle,
 } satisfies Record<ActivityKey, LucideIcon>;
 

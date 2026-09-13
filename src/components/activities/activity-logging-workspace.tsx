@@ -797,6 +797,7 @@ function activityQuestion(
     meditation: "practice",
     sleep: "sleep",
     water: "drink",
+    communication: "practice",
   };
   const verb = verbs[commitment.activityKey] ?? "complete";
   if (measurement.type === "volume") {

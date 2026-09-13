@@ -67,6 +67,16 @@ type SkillSnapshotRow = { id: string; user_id: string; dimension: CommunicationS
 export class CommunicationRepository {
   constructor(private readonly client: SupabaseClient) {}
 
+  async expireStaleSessions(userId: string, cutoff = new Date(Date.now() - 45 * 60 * 1000).toISOString()) {
+    const updates = await Promise.all([
+      this.client.from("communication_sessions").update({ status: "INCOMPLETE", ended_at: new Date().toISOString() }).eq("user_id", userId).eq("status", "ACTIVE").lt("started_at", cutoff),
+      this.client.from("communication_explain_sessions").update({ status: "INCOMPLETE", ended_at: new Date().toISOString() }).eq("user_id", userId).eq("status", "ACTIVE").lt("started_at", cutoff),
+      this.client.from("communication_meaning_sessions").update({ status: "INCOMPLETE", ended_at: new Date().toISOString() }).eq("user_id", userId).eq("status", "ACTIVE").lt("started_at", cutoff),
+    ]);
+    const failed = updates.find((response) => response.error);
+    if (failed?.error) throw failed.error;
+  }
+
   async createSession(userId: string, setup: CommunicationSessionSetup): Promise<CommunicationSession> {
     const now = new Date().toISOString();
     const session = {
@@ -160,7 +170,7 @@ export class CommunicationRepository {
 
   async recordPhraseEvent(userId: string, phraseId: string, eventType: CommunicationPhraseEventType, sessionId?: string, metadata?: Record<string, unknown>) {
     const now = new Date().toISOString();
-    const inserted = await this.client.from("communication_phrase_events").insert({ id: crypto.randomUUID(), user_id: userId, session_id: sessionId ?? null, phrase_id: phraseId, event_type: eventType, occurred_at: now, metadata: metadata ?? null, created_at: now }).select("*").single();
+    const inserted = await this.client.from("communication_phrase_events").insert({ id: crypto.randomUUID(), user_id: userId, session_id: sessionId ?? null, phrase_id: phraseId, event_type: eventType, occurred_at: now, confidence: typeof metadata?.confidence === "number" ? metadata.confidence : null, metadata: metadata ?? null, created_at: now }).select("*").single();
     if (inserted.error) throw inserted.error;
     const eventsResponse = await this.client.from("communication_phrase_events").select("*").eq("user_id", userId).eq("phrase_id", phraseId).order("occurred_at", { ascending: true });
     if (eventsResponse.error) throw eventsResponse.error;

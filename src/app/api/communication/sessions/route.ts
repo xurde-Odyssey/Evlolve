@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { getConversationProvider } from "@/application/communication/providers";
 import { getCommunicationContext } from "@/application/communication/server/auth";
 import type { CommunicationSessionSetup } from "@/types/communication";
+import { allowCommunicationRequest } from "@/application/communication/rate-limit";
 
 export async function POST(request: Request) {
   const context = await getCommunicationContext();
   if (!context) return NextResponse.json({ error: "Sign in before starting a Communication session." }, { status: 401 });
+  if (!allowCommunicationRequest(context.user.id, "session-start", 8, 3_600_000)) return NextResponse.json({ error: "You have started many sessions recently. Complete one before starting another." }, { status: 429 });
 
   const setup = (await request.json()) as Partial<CommunicationSessionSetup>;
   if (![5, 10, 15, 20].includes(setup.targetDurationMinutes ?? 0) || !setup.inputMode || !setup.difficulty || !setup.conversationStyle) {

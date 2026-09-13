@@ -48,6 +48,13 @@ export const communicationModules: CommunicationPracticeModule[] = [
     support: "Expressions - Context - Meaning",
     actionLabel: "Start Practice",
   },
+  {
+    id: "phrase-practice",
+    title: "Phrase Practice",
+    description: "Recall useful expressions and use them naturally in context.",
+    support: "Recall - Context - Natural usage",
+    actionLabel: "Practice Phrases",
+  },
 ];
 
 export const communicationPhrases: CommunicationPhrase[] = [

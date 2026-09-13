@@ -39,7 +39,7 @@ export type CommunicationPhrase = {
 };
 
 export type CommunicationPracticeModule = {
-  id: "conversation" | "explain" | "meaning";
+  id: "conversation" | "explain" | "meaning" | "phrase-practice";
   title: string;
   description: string;
   support: string;

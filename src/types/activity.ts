@@ -6,6 +6,7 @@ export type ActivityKey =
   | "meditation"
   | "sleep"
   | "water"
+  | "communication"
   | "custom";
 
 export type MeasurementType =

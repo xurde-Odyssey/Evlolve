@@ -59,4 +59,10 @@ export const activityDefinitions = [
       },
     ],
   },
+  {
+    key: "communication",
+    label: "Communication",
+    measurementOptions: [{ type: "completion", label: "Session", unit: "session" }],
+    source: "system",
+  },
 ] satisfies ActivityDefinition[];

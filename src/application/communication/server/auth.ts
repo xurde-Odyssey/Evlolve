@@ -9,5 +9,7 @@ export async function getCommunicationContext() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  return { user, repository: new CommunicationRepository(createSupabaseServiceClient()) };
+  const repository = new CommunicationRepository(createSupabaseServiceClient());
+  await repository.expireStaleSessions(user.id);
+  return { user, repository };
 }
