@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { BarChart3, BookOpen, CheckCircle2, Download, LineChart, LockKeyhole, XCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -13,6 +12,7 @@ import {
 } from "@/components/ui/system-state";
 import { cn } from "@/lib/utils/cn";
 import { formatPercent } from "@/lib/utils/format";
+import { PerformanceOverviewChart } from "@/components/reports/performance-overview-chart";
 import type { DataViewState } from "@/types/system-state";
 import type {
   ActivityReport,
@@ -124,7 +124,7 @@ export function ReportsWorkspace({
         </Button>
       </div>
 
-      <PerformanceOverview report={selectedReport} />
+      <PerformanceOverviewChart performance={snapshot.performance} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
         <TargetActualSection activities={selectedReport.activities} />
@@ -135,57 +135,6 @@ export function ReportsWorkspace({
       <ComparisonSection report={selectedReport} />
       <ProgressionAndBaseline report={selectedReport} />
     </div>
-  );
-}
-
-function PerformanceOverview({ report }: { report: PeriodReport }) {
-  return (
-    <Card className="space-y-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">
-            Performance overview
-          </p>
-          <h2 className="mt-2 text-xl font-semibold text-[var(--foreground)]">
-            {report.period.label}
-          </h2>
-          <p className="mt-1 text-sm leading-6 text-[var(--foreground-muted)]">
-            {report.period.rangeLabel}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge tone="neutral">{report.overview.activitiesTracked} tracked</Badge>
-          <Badge tone={report.period.status === "OFFICIAL" ? "accent" : "warning"}>
-            {report.period.status === "OFFICIAL" ? "Official" : "Provisional"}
-          </Badge>
-        </div>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <SummaryMetric
-          label="Required"
-          value={report.overview.requiredCommitments}
-        />
-        <SummaryMetric
-          label="Completed"
-          value={report.overview.completedCommitments}
-        />
-        <SummaryMetric label="Missed" value={report.overview.missedCommitments} />
-        <SummaryMetric
-          label="Consistency"
-          value={
-            report.overview.overallConsistencyPercent === null
-              ? "Not enough data"
-              : `${formatPercent(report.overview.overallConsistencyPercent)}%`
-          }
-          numeric={report.overview.overallConsistencyPercent !== null}
-        />
-        <SummaryMetric
-          label="Activities"
-          value={report.overview.activitiesTracked}
-        />
-      </div>
-    </Card>
   );
 }
 

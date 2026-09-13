@@ -9,6 +9,7 @@ import { defaultTargetProgressionPolicy } from "../target/progression";
 import { defaultXpPolicy } from "../xp/policy";
 import { defaultAdaptiveIntelligencePolicy } from "../adaptive/policy";
 import { defaultMajorMilestonePolicy } from "../milestones/policy";
+import { defaultBehaviorBoundaryPolicy } from "../behavior/boundaries";
 import type { SimulationPolicyOverrides, SimulationPolicySet } from "./types";
 
 export const evolveEnginePolicyRegistry = {
@@ -49,6 +50,10 @@ export const evolveEnginePolicyRegistry = {
     majorMilestones: {
       owner: "domain/evolve-engine/milestones",
       policy: defaultMajorMilestonePolicy,
+    },
+    behaviorBoundaries: {
+      owner: "domain/evolve-engine/behavior",
+      policy: defaultBehaviorBoundaryPolicy,
     },
   },
   invariants: [

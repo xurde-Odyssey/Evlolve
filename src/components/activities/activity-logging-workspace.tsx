@@ -18,6 +18,7 @@ import { activityDefinitions } from "@/config/activity-definitions";
 import { activityIcons } from "@/config/icon-maps";
 import { ActivityHistory } from "@/components/activities/activity-history";
 import { DailyQuests } from "@/components/quests/daily-quests";
+import { BehaviorBoundariesToday } from "@/components/dashboard/today-execution";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SystemState } from "@/components/ui/system-state";
@@ -33,6 +34,8 @@ import {
 import type {
   ServerActivityLogInput,
   ServerActivityLogResponse,
+  BehaviorOccurrenceInput,
+  ServerCommandResponse,
 } from "@/application/evolve/server/commands";
 import type { EvolveServerActionResult } from "@/application/evolve/server/errors";
 import type {
@@ -44,6 +47,8 @@ import type {
   WorkoutExercise,
 } from "@/types/activity";
 import type { GrowthCommitment } from "@/application/evolve";
+import type { BehaviorBoundaryState } from "@/domain/evolve-engine";
+import { getBehaviorBoundaryStates } from "@/application/evolve";
 
 const fallbackActivityDefinition = activityDefinitions[0] as ActivityDefinition;
 
@@ -52,6 +57,9 @@ type ActivityLoggingWorkspaceProps = {
   logActivityAction?: (
     input: ServerActivityLogInput,
   ) => Promise<EvolveServerActionResult<ServerActivityLogResponse>>;
+  logBehaviorOccurrenceAction?: (
+    input: BehaviorOccurrenceInput,
+  ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
 };
 
 type SuccessState = {
@@ -70,11 +78,13 @@ type WorkoutEntry = {
 export function ActivityLoggingWorkspace({
   initialState,
   logActivityAction,
+  logBehaviorOccurrenceAction,
 }: ActivityLoggingWorkspaceProps) {
   return (
     <ActivityLoggingSession
       initialState={initialState}
       logActivityAction={logActivityAction}
+      logBehaviorOccurrenceAction={logBehaviorOccurrenceAction}
     />
   );
 }
@@ -82,6 +92,7 @@ export function ActivityLoggingWorkspace({
 function ActivityLoggingSession({
   initialState,
   logActivityAction,
+  logBehaviorOccurrenceAction,
 }: ActivityLoggingWorkspaceProps) {
   const router = useRouter();
   const [appState, setAppState] = useState<EvolveLocalState>(initialState);
@@ -122,6 +133,9 @@ function ActivityLoggingSession({
   const [lastSubmissionSignature, setLastSubmissionSignature] = useState<
     string | null
   >(null);
+  const [behaviorBoundaries, setBehaviorBoundaries] = useState<BehaviorBoundaryState[]>(() => getBehaviorBoundaryStates(initialState));
+  const [savingBehaviorType, setSavingBehaviorType] = useState<string | null>(null);
+  const [behaviorMessage, setBehaviorMessage] = useState<string | null>(null);
 
   const sortedRecords = useMemo(
     () =>
@@ -131,6 +145,25 @@ function ActivityLoggingSession({
       ),
     [activityRecords],
   );
+
+  async function logBehavior(behaviorType: BehaviorBoundaryState["boundary"]["behaviorType"]) {
+    if (!logBehaviorOccurrenceAction || savingBehaviorType) return;
+    setSavingBehaviorType(behaviorType);
+    setBehaviorMessage(null);
+    const result = await logBehaviorOccurrenceAction({
+      behaviorType,
+      occurredAt: new Date().toISOString(),
+      idempotencyKey: crypto.randomUUID(),
+    });
+    if (result.ok) {
+      setBehaviorBoundaries(result.data.dashboard.behaviorBoundaries);
+      setBehaviorMessage(behaviorType === "SOCIAL_OUTING" ? "Outing recorded." : "Behavior recorded and evaluated.");
+      router.refresh();
+    } else {
+      setBehaviorMessage(result.message);
+    }
+    setSavingBehaviorType(null);
+  }
 
   function handleCommitmentChange(commitment: GrowthCommitment) {
     const nextActivity = getActivityDefinition(commitment.activityKey);
@@ -640,6 +673,12 @@ function ActivityLoggingSession({
         weeklyRequirements={getScheduledRequirementsForCurrentWeek(appState)}
         now={appState.now}
         timePolicy={appState.timePolicy}
+      />
+      <BehaviorBoundariesToday
+        boundaries={behaviorBoundaries}
+        savingBehaviorType={savingBehaviorType}
+        message={behaviorMessage}
+        onLog={logBehavior}
       />
       <ActivityHistory
         records={sortedRecords}

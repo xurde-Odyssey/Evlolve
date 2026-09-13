@@ -128,6 +128,8 @@ export function createDemoEvolveState(): EvolveLocalState {
     learningTracks: [],
     majorMilestones: [],
     notepadNotes: [],
+    behaviorBoundaries: [],
+    behaviorOccurrences: [],
     activeBosses: [],
     bossHistory: [],
     recommendations: [],

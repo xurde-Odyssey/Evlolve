@@ -14,7 +14,7 @@ import { activityDefinitions } from "@/config/activity-definitions";
 import type { ActivityKey, MeasurementType } from "@/types/activity";
 import type { ActivitySchedule, SettingsSnapshot } from "@/types/settings";
 import { isSupabaseAuthorityConfigured } from "@/lib/supabase/env";
-import { activateActivityAction, activateBookaholicAction, archiveLearningTrackAction, completeLearningTrackAction, createLearningTrackAction, deactivateActivityAction, saveWeeklyRemindersAction, updateActivityAction } from "./actions";
+import { activateActivityAction, activateBookaholicAction, archiveLearningTrackAction, completeLearningTrackAction, correctBehaviorOccurrenceAction, createBehaviorBoundaryAction, createLearningTrackAction, deactivateActivityAction, saveWeeklyRemindersAction, updateActivityAction } from "./actions";
 
 export default async function SettingsPage() {
   const state = await getCurrentEvolveState();
@@ -38,6 +38,11 @@ export default async function SettingsPage() {
         createLearningTrackAction={isSupabaseAuthorityConfigured() ? createLearningTrackAction : undefined}
         completeLearningTrackAction={isSupabaseAuthorityConfigured() ? completeLearningTrackAction : undefined}
         archiveLearningTrackAction={isSupabaseAuthorityConfigured() ? archiveLearningTrackAction : undefined}
+        behaviorBoundaries={state.behaviorBoundaries}
+        behaviorOccurrences={state.behaviorOccurrences}
+        createBehaviorBoundaryAction={isSupabaseAuthorityConfigured() ? createBehaviorBoundaryAction : undefined}
+        correctBehaviorOccurrenceAction={isSupabaseAuthorityConfigured() ? correctBehaviorOccurrenceAction : undefined}
+        behaviorNow={state.now}
       />
       <PageHeader
         eyebrow="Commitments"

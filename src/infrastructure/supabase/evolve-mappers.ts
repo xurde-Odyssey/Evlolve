@@ -17,6 +17,7 @@ import type { LearningTrack } from "@/types/learning-track";
 import type { MajorMilestone } from "@/types/major-milestone";
 import type { NotepadNote } from "@/types/notepad";
 import type { WeeklyReminder } from "@/types/weekly-reminder";
+import type { BehaviorBoundary, BehaviorOccurrence } from "@/domain/evolve-engine";
 import type { GrowthCommitment } from "@/application/evolve";
 import type { ScheduledRequirement } from "@/application/evolve";
 import { toJson, type Json } from "./json";
@@ -24,6 +25,43 @@ import { toJson, type Json } from "./json";
 export type PayloadRow = {
   domain_payload: Json;
 };
+
+export function behaviorBoundaryToRow(userId: string, boundary: BehaviorBoundary) {
+  return {
+    domain_id: boundary.id,
+    user_id: userId,
+    behavior_type: boundary.behaviorType,
+    category: boundary.category,
+    intent: boundary.intent,
+    mode: boundary.mode,
+    limit_config: toJson(boundary.limitConfig),
+    status: boundary.status,
+    version: boundary.version,
+    label: boundary.label,
+    started_at: boundary.startedAt,
+    completed_at: boundary.completedAt ?? null,
+    domain_payload: toJson(boundary),
+  };
+}
+
+export function behaviorOccurrenceToRow(userId: string, occurrence: BehaviorOccurrence) {
+  return {
+    domain_id: occurrence.id,
+    user_id: userId,
+    behavior_type: occurrence.behaviorType,
+    category: occurrence.category,
+    occurred_at: occurrence.occurredAt,
+    quantity: occurrence.quantity ?? null,
+    unit: occurrence.unit ?? null,
+    source: occurrence.source,
+    notes: occurrence.notes ?? null,
+    boundary_id: occurrence.boundaryId ?? null,
+    record_status: occurrence.status,
+    idempotency_key: occurrence.idempotencyKey ?? occurrence.id,
+    evaluation_status: occurrence.evaluation?.status ?? null,
+    domain_payload: toJson(occurrence),
+  };
+}
 
 export type DomainIdRow = {
   id: string;

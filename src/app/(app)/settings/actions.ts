@@ -14,6 +14,10 @@ import {
   type WeeklyReminderInput,
   type ServerCommandResponse,
   type LearningTrackInput,
+  createBehaviorBoundaryAuthoritatively,
+  type BehaviorBoundaryInput,
+  correctBehaviorOccurrenceAuthoritatively,
+  type BehaviorOccurrenceCorrection,
 } from "@/application/evolve/server/commands";
 import type { EvolveServerActionResult } from "@/application/evolve/server/errors";
 import type { ActivityConfiguration } from "@/types/settings";
@@ -100,5 +104,30 @@ export async function archiveLearningTrackAction(
 ): Promise<EvolveServerActionResult<ServerCommandResponse>> {
   const result = await archiveLearningTrackAuthoritatively(trackId);
   if (result.ok) revalidatePath("/settings");
+  return result;
+}
+
+export async function createBehaviorBoundaryAction(
+  input: BehaviorBoundaryInput,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  const result = await createBehaviorBoundaryAuthoritatively(input);
+  if (result.ok) {
+    revalidatePath("/settings");
+    revalidatePath("/dashboard");
+    revalidatePath("/reports");
+  }
+  return result;
+}
+
+export async function correctBehaviorOccurrenceAction(
+  occurrenceId: string,
+  correction: BehaviorOccurrenceCorrection,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  const result = await correctBehaviorOccurrenceAuthoritatively(occurrenceId, correction);
+  if (result.ok) {
+    revalidatePath("/settings");
+    revalidatePath("/dashboard");
+    revalidatePath("/reports");
+  }
   return result;
 }

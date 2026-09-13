@@ -231,6 +231,14 @@ function WeeklyActivityCalendar({
         })}
       </div>
 
+      <QuestHeatMap
+        days={days}
+        rows={rows}
+        evidence={evidence}
+        now={now}
+        weeklyRequirements={weeklyRequirements}
+      />
+
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">Today</p>
         {todayRows.length > 0 ? (
@@ -329,6 +337,122 @@ function WeeklyActivityCalendar({
       <p className="text-xs text-[var(--foreground-muted)]">Activity is recorded in Quick Log.</p>
     </div>
   );
+}
+
+function QuestHeatMap({
+  days,
+  rows,
+  evidence,
+  now,
+  weeklyRequirements,
+}: {
+  days: string[];
+  rows: ScheduledRequirement[];
+  evidence: ActivityExecutionEvidence[];
+  now: string;
+  weeklyRequirements: ScheduledRequirement[];
+}) {
+  const definition = rotatingEvolveDefinition(now);
+  const recordedThisWeek = rows.reduce(
+    (total, row) => total + days.filter((day) => {
+      const requirement = requirementForDay(row.commitmentId, day, weeklyRequirements);
+      return requirement ? isDayComplete(requirement, day, evidence, now) : false;
+    }).length,
+    0,
+  );
+
+  return (
+    <section className="w-full overflow-hidden rounded-md border border-[var(--foreground-muted)]/35 bg-[var(--background)] p-3 sm:p-4" aria-labelledby="quest-heat-map-title">
+      <div className="grid gap-4 lg:grid-cols-[minmax(12rem,0.72fr)_minmax(0,1.28fr)] lg:gap-5">
+        <aside className="rounded-sm border-b border-[var(--foreground-muted)]/35 pb-4 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-5" aria-label="Definition of consistency">
+          <p className="font-serif text-4xl font-semibold leading-none tracking-tight text-[var(--foreground)] sm:text-5xl">{definition.word}</p>
+          <p className="mt-3 font-serif text-xs italic text-[var(--foreground-muted)]">{definition.pronunciation} &nbsp; noun &bull; English</p>
+          <div className="my-3 border-t border-[var(--foreground-muted)]/55" />
+          <p className="font-serif text-sm leading-6 text-[var(--foreground)] sm:text-[15px]">{definition.description}</p>
+        </aside>
+
+        <div className="space-y-2.5">
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p id="quest-heat-map-title" className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--foreground)]">Execution heat map</p>
+          <p className="mt-1 text-[10px] text-[var(--foreground-muted)]">{recordedThisWeek} activit{recordedThisWeek === 1 ? "y" : "ies"} recorded this week.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-semibold text-[var(--foreground-muted)]" aria-label="Heat map legend">
+          <span>Less</span>
+          <i className="size-3 rounded-[3px] border border-[var(--border)] bg-[var(--surface-elevated)]" aria-hidden="true" />
+          <i className="size-3 rounded-[3px] bg-[var(--foreground-muted)]/55" aria-hidden="true" />
+          <i className="size-3 rounded-[3px] bg-[var(--foreground-muted)]/80" aria-hidden="true" />
+          <i className="size-3 rounded-[3px] bg-[var(--foreground)]" aria-hidden="true" />
+          <span>More</span>
+        </div>
+          </div>
+
+          <div className="w-full">
+            <div className="space-y-1">
+          <div className="grid grid-cols-[minmax(4.75rem,0.85fr)_repeat(7,minmax(0,1fr))] gap-1">
+            <span aria-hidden="true" />
+            {days.map((day) => <span key={day} className="text-center text-[0.62rem] font-semibold uppercase text-[var(--foreground-muted)]">{dayLabel(day).slice(0, 1)}</span>)}
+          </div>
+              {rows.map((row) => (
+            <div key={row.commitmentId} className="grid grid-cols-[minmax(4.75rem,0.85fr)_repeat(7,minmax(0,1fr))] items-center gap-1">
+              <span className="min-w-0 truncate text-[10px] font-semibold text-[var(--foreground)]">{row.title}</span>
+              {days.map((day) => {
+                const requirement = requirementForDay(row.commitmentId, day, weeklyRequirements);
+                const scheduled = Boolean(requirement);
+                const complete = requirement ? isDayComplete(requirement, day, evidence, now) : false;
+                return (
+                  <span
+                    key={day}
+                    className={cn(
+                      "mx-auto aspect-square w-full max-w-5 rounded-sm border transition-colors",
+                      complete
+                        ? "border-[var(--foreground)] bg-[var(--foreground)]"
+                        : scheduled
+                          ? "border-[var(--border)] bg-[var(--surface-elevated)]"
+                          : "border-transparent bg-transparent",
+                    )}
+                    title={`${row.title}, ${day}: ${complete ? "completed" : scheduled ? "scheduled" : "not scheduled"}`}
+                    aria-label={`${row.title}, ${day}: ${complete ? "completed" : scheduled ? "scheduled" : "not scheduled"}`}
+                  />
+                );
+              })}
+            </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const evolveDefinitions = [
+  {
+    word: "consistency",
+    pronunciation: "[kuhn-sis-tuhn-see]",
+    description: "the ability to repeat a process or activity with the same level of quality over and over again. the adherence of the same principles in a steadfast way.",
+  },
+  {
+    word: "discipline",
+    pronunciation: "[dis-uh-plin]",
+    description: "the practice of directing attention and action toward a chosen standard, especially when comfort offers an easier direction.",
+  },
+  {
+    word: "focus",
+    pronunciation: "[foh-kuhs]",
+    description: "the deliberate narrowing of attention toward the work that matters, while the unnecessary is left outside the frame.",
+  },
+  {
+    word: "passion",
+    pronunciation: "[pash-uhn]",
+    description: "a sustained care for meaningful work that keeps returning you to the standard, even after the first excitement has passed.",
+  },
+] as const;
+
+function rotatingEvolveDefinition(now: string) {
+  const dayKey = now.slice(0, 10);
+  const hash = [...dayKey].reduce((total, character) => total + character.charCodeAt(0), 0);
+  return evolveDefinitions[hash % evolveDefinitions.length] ?? evolveDefinitions[0];
 }
 
 function WeeklyReminderSummary({ reminders }: { reminders: WeeklyReminder[] }) {

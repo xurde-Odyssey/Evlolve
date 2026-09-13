@@ -27,6 +27,12 @@ import {
   type EvolveRecommendation,
   type TargetHistoryRecord,
   type TargetProgressionRecommendation,
+  evaluateBehaviorBoundary,
+  defaultBehaviorBoundaryPolicy,
+  type BehaviorBoundary,
+  type BehaviorBoundaryMode,
+  type BehaviorOccurrence,
+  type BehaviorType,
 } from "@/domain/evolve-engine";
 import type { ActivityKey, ActivityRecord, MeasurementType } from "@/types/activity";
 import type { ActivityConfiguration } from "@/types/settings";
@@ -86,6 +92,148 @@ export type LearningTrackInput = CreateLearningTrackInput;
 export type MajorMilestoneInput = CreateMajorMilestoneInput;
 export type NotepadNoteInput = CreateNotepadNoteInput;
 export type NotepadNoteUpdateInput = UpdateNotepadNoteInput;
+
+export type BehaviorBoundaryInput = {
+  behaviorType: BehaviorType;
+  label?: string;
+  intent: "QUIT" | "REDUCE" | "CONTEXT_ONLY";
+  mode: BehaviorBoundaryMode;
+  limitConfig?: BehaviorBoundary["limitConfig"];
+  replaceBoundaryId?: string;
+};
+
+export type BehaviorOccurrenceInput = {
+  idempotencyKey: string;
+  behaviorType: BehaviorType;
+  occurredAt: string;
+  quantity?: number;
+  unit?: string;
+  tags?: string[];
+  notes?: string;
+};
+
+export type BehaviorOccurrenceCorrection = "CORRECTED" | "VOIDED";
+
+export async function createBehaviorBoundaryAuthoritatively(
+  input: BehaviorBoundaryInput,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  return mutateState((memory) => {
+    const state = memory.getState();
+    const activeBoundaries = state.behaviorBoundaries.filter((boundary) => ["ACTIVE", "ESTABLISHED", "REOPENED"].includes(boundary.status));
+    const existing = activeBoundaries.find((boundary) => boundary.behaviorType === input.behaviorType);
+    if (existing && existing.id !== input.replaceBoundaryId) {
+      throw new Error("active boundary already exists");
+    }
+    const seriousActiveCount = activeBoundaries.filter((boundary) => boundary.category === "RESTRICTED").length;
+    if (!existing && input.intent !== "CONTEXT_ONLY" && seriousActiveCount >= defaultBehaviorBoundaryPolicy.maxActiveBoundaries) {
+      throw new Error("boundary capacity reached");
+    }
+    const now = new Date().toISOString();
+    const previousVersions = state.behaviorBoundaries.filter((item) => item.behaviorType === input.behaviorType);
+    const boundary: BehaviorBoundary = {
+      id: `boundary:${input.behaviorType.toLowerCase()}:${now}`,
+      behaviorType: input.behaviorType,
+      label: input.label?.trim() || behaviorLabel(input.behaviorType),
+      category: input.behaviorType === "SOCIAL_OUTING" ? "CONTEXTUAL" : "RESTRICTED",
+      intent: input.intent,
+      mode: input.mode,
+      limitConfig: input.limitConfig ?? {},
+      status: "ACTIVE",
+      startedAt: now,
+      version: previousVersions.reduce((highest, item) => Math.max(highest, item.version), 0) + 1,
+      createdAt: now,
+      updatedAt: now,
+    };
+    memory.replaceState({
+      ...state,
+      behaviorBoundaries: [
+        ...state.behaviorBoundaries.map((item) =>
+          item.behaviorType === boundary.behaviorType && ["ACTIVE", "ESTABLISHED", "REOPENED"].includes(item.status)
+            ? { ...item, status: "DEACTIVATED" as const, updatedAt: now }
+            : item,
+        ),
+        boundary,
+      ],
+    });
+    return boundary;
+  });
+}
+
+export async function correctBehaviorOccurrenceAuthoritatively(
+  occurrenceId: string,
+  correction: BehaviorOccurrenceCorrection,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  return mutateState((memory) => {
+    const state = memory.getState();
+    const occurrence = state.behaviorOccurrences.find((item) => item.id === occurrenceId);
+    if (!occurrence || occurrence.status !== "ACTIVE") throw new Error("behavior occurrence not found");
+    const nextOccurrences = state.behaviorOccurrences.map((item) =>
+      item.id === occurrenceId ? { ...item, status: correction, correctedAt: new Date().toISOString() } : item,
+    );
+    const boundary = occurrence.boundaryId
+      ? state.behaviorBoundaries.find((item) => item.id === occurrence.boundaryId)
+      : undefined;
+    const recalculated = boundary
+      ? nextOccurrences.map((item) => {
+        if (item.boundaryId !== boundary.id || item.status !== "ACTIVE") return item;
+        return {
+          ...item,
+          evaluation: evaluateBehaviorBoundary({
+            boundary,
+            occurrences: nextOccurrences,
+            occurredAt: item.occurredAt,
+          }),
+        };
+      })
+      : nextOccurrences;
+    memory.replaceState({ ...state, behaviorOccurrences: recalculated });
+  });
+}
+
+export async function logBehaviorOccurrenceAuthoritatively(
+  input: BehaviorOccurrenceInput,
+): Promise<EvolveServerActionResult<ServerCommandResponse>> {
+  return mutateState((memory) => {
+    const state = memory.getState();
+    if (state.behaviorOccurrences.some((occurrence) => occurrence.idempotencyKey === input.idempotencyKey)) return;
+    const now = new Date().toISOString();
+    const boundary = state.behaviorBoundaries
+      .filter((item) => item.behaviorType === input.behaviorType && ["ACTIVE", "ESTABLISHED", "REOPENED"].includes(item.status))
+      .sort((a, b) => b.version - a.version)[0];
+    const base: BehaviorOccurrence = {
+      id: `behavior:${input.behaviorType.toLowerCase()}:${input.idempotencyKey}`,
+      behaviorType: input.behaviorType,
+      category: input.behaviorType === "SOCIAL_OUTING" ? "CONTEXTUAL" : "RESTRICTED",
+      occurredAt: input.occurredAt,
+      quantity: input.quantity,
+      unit: input.unit,
+      tags: input.tags,
+      notes: input.notes,
+      source: "MANUAL",
+      status: "ACTIVE",
+      boundaryId: boundary?.id,
+      idempotencyKey: input.idempotencyKey,
+      createdAt: now,
+    };
+    const evaluation = boundary
+      ? evaluateBehaviorBoundary({ boundary, occurrences: [...state.behaviorOccurrences, base], occurredAt: input.occurredAt })
+      : { status: "NO_ACTIVE_BOUNDARY" as const, usage: 0, periodKey: "none", evidenceRefs: [], adherencePercent: null };
+    memory.replaceState({
+      ...state,
+      behaviorOccurrences: [...state.behaviorOccurrences, { ...base, evaluation }],
+    });
+  });
+}
+
+function behaviorLabel(type: BehaviorType) {
+  return {
+    DRINKING: "Drinking",
+    SMOKING: "Puffing",
+    LATE_NIGHT: "Late Night",
+    SOCIAL_OUTING: "Social Outing",
+    CUSTOM: "Behavior",
+  }[type];
+}
 
 export async function createNotepadNoteAuthoritatively(input: NotepadNoteInput): Promise<EvolveServerActionResult<ServerCommandResponse>> {
   return mutateNotepadState((memory) => createNotepadNote(memory, input));
@@ -590,6 +738,10 @@ async function mutateState(
   } catch (error) {
     if (error instanceof Error && error.message.includes("capacity")) {
       return errorResult("CAPACITY_EXCEEDED", "Commitment capacity is full.");
+    }
+
+    if (error instanceof Error && error.message.includes("active boundary")) {
+      return errorResult("FORBIDDEN", "An active boundary already exists for this behavior. Edit the existing boundary instead.");
     }
 
     if (error instanceof Error && error.message.includes("locked")) {

@@ -381,7 +381,94 @@ export type DevelopmentPillarState = {
   pressureFlags: PillarPressureFlag[];
 };
 
-export type BehaviorCategory = "DEVELOPMENT" | "LIFESTYLE" | "RESTRICTED";
+export type BehaviorCategory = "DEVELOPMENT" | "LIFESTYLE" | "CONTEXTUAL" | "RESTRICTED";
+
+export type BehaviorType = "DRINKING" | "SMOKING" | "LATE_NIGHT" | "SOCIAL_OUTING" | "CUSTOM";
+
+export type BehaviorBoundaryIntent = "QUIT" | "REDUCE" | "CONTEXT_ONLY";
+
+export type BehaviorBoundaryMode =
+  | "ZERO_TOLERANCE"
+  | "WEEKLY_CAP"
+  | "MONTHLY_CAP"
+  | "MINIMUM_SPACING"
+  | "QUANTITY_LIMIT"
+  | "CONTEXT_ONLY";
+
+export type BehaviorBoundaryStatus = "ACTIVE" | "ESTABLISHED" | "COMPLETED" | "REOPENED" | "DEACTIVATED";
+
+export type BehaviorBoundary = {
+  id: string;
+  userId?: string;
+  behaviorType: BehaviorType;
+  label: string;
+  category: "CONTEXTUAL" | "RESTRICTED";
+  intent: BehaviorBoundaryIntent;
+  mode: BehaviorBoundaryMode;
+  limitConfig: {
+    cap?: number;
+    quantity?: number;
+    spacingDays?: number;
+    unit?: string;
+    period?: "DAY" | "WEEK" | "MONTH";
+  };
+  status: BehaviorBoundaryStatus;
+  startedAt: string;
+  completedAt?: string;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BehaviorOccurrenceStatus = "ACTIVE" | "CORRECTED" | "VOIDED";
+
+export type BehaviorOccurrence = {
+  id: string;
+  userId?: string;
+  behaviorType: BehaviorType;
+  category: "CONTEXTUAL" | "RESTRICTED";
+  occurredAt: string;
+  quantity?: number;
+  unit?: string;
+  tags?: string[];
+  notes?: string;
+  source: EvidenceSource;
+  status: BehaviorOccurrenceStatus;
+  boundaryId?: string;
+  evaluation?: BehaviorBoundaryEvaluation;
+  idempotencyKey?: string;
+  createdAt: string;
+  correctedAt?: string;
+};
+
+export type BehaviorBoundaryEvaluationStatus =
+  | "WITHIN_LIMIT"
+  | "APPROACHING_LIMIT"
+  | "VIOLATED"
+  | "REPEATED_VIOLATION"
+  | "NO_ACTIVE_BOUNDARY"
+  | "INSUFFICIENT_DATA";
+
+export type BehaviorBoundaryEvaluation = {
+  status: BehaviorBoundaryEvaluationStatus;
+  usage: number;
+  limit?: number;
+  periodKey: string;
+  evidenceRefs: string[];
+  adherencePercent?: number | null;
+};
+
+export type BehaviorPressureState = "CLEAR" | "WATCH" | "ELEVATED" | "HIGH" | "RECOVERING";
+
+export type BehaviorBoundaryState = {
+  boundary: BehaviorBoundary;
+  currentStreak: number;
+  bestStreak: number;
+  periodUsage: number;
+  pressure: BehaviorPressureState;
+  recentViolations: number;
+  latestEvaluation?: BehaviorBoundaryEvaluation;
+};
 
 export type BehaviorEvent = {
   id: string;

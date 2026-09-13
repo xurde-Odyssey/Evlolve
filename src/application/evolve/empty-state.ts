@@ -51,6 +51,8 @@ export function createEmptyEvolveState({
     weeklySnapshots: [],
     monthlySnapshots: [],
     monthlyEvaluations: [],
+    behaviorBoundaries: [],
+    behaviorOccurrences: [],
     currentLevel: 1,
     highestLevel,
     capacity: initialCommitmentCapacityState(0),

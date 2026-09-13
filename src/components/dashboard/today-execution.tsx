@@ -20,6 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -38,15 +39,102 @@ import type {
   TodayReadingState,
 } from "@/types/daily-execution";
 import type { WeeklyReminder } from "@/types/weekly-reminder";
-import type { ServerCommandResponse } from "@/application/evolve/server/commands";
+import type { BehaviorOccurrenceInput, ServerCommandResponse } from "@/application/evolve/server/commands";
 import type { EvolveServerActionResult } from "@/application/evolve/server/errors";
+import type { BehaviorBoundaryState } from "@/domain/evolve-engine";
 
 type TodayExecutionProps = {
   execution: DailyExecutionSnapshot;
   completeWeeklyReminderAction?: (
     reminderId: string,
   ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  behaviorBoundaries: BehaviorBoundaryState[];
+  logBehaviorOccurrenceAction?: (
+    input: BehaviorOccurrenceInput,
+  ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
 };
+
+export function BehaviorBoundariesToday({
+  boundaries,
+  savingBehaviorType,
+  message,
+  onLog,
+}: {
+  boundaries: BehaviorBoundaryState[];
+  savingBehaviorType: string | null;
+  message: string | null;
+  onLog: (behaviorType: BehaviorBoundaryState["boundary"]["behaviorType"]) => void;
+}) {
+  const [confirmingBehaviorType, setConfirmingBehaviorType] = useState<BehaviorBoundaryState["boundary"]["behaviorType"] | null>(null);
+  if (boundaries.length === 0) return null;
+
+  const actionLabel: Record<BehaviorBoundaryState["boundary"]["behaviorType"], string> = {
+    DRINKING: "Drank today",
+    SMOKING: "Puffed today",
+    LATE_NIGHT: "Stayed up late",
+    SOCIAL_OUTING: "Went out today",
+    CUSTOM: "Record today",
+  };
+
+  return (
+    <section className="space-y-3 rounded-md border border-[var(--border)] bg-[var(--background)] p-4" aria-labelledby="today-boundaries">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 id="today-boundaries" className="text-sm font-semibold uppercase text-[var(--foreground-muted)]">Behavior &amp; boundaries</h2>
+          <p className="mt-1 text-xs text-[var(--foreground-muted)]">Record context and personal limits separately from commitments.</p>
+        </div>
+        <Link className="text-xs font-semibold text-[var(--accent)] hover:underline" href="/settings">Manage</Link>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {boundaries.map((state) => (
+          <div key={state.boundary.id} className="flex items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--surface)] p-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-[var(--foreground)]">{state.boundary.behaviorType === "SMOKING" ? "Puffing" : state.boundary.label}</p>
+              <p className="mt-1 text-xs text-[var(--foreground-muted)]">
+                {state.boundary.intent === "CONTEXT_ONLY" ? "Context only" : state.boundary.mode === "ZERO_TOLERANCE" ? `${state.currentStreak} days since last occurrence` : `${state.periodUsage}${state.latestEvaluation?.limit === undefined ? " recorded" : ` / ${state.latestEvaluation.limit}`}`}
+                {` · ${state.pressure === "CLEAR" ? "Within limit" : state.pressure.toLowerCase()}`}
+              </p>
+            </div>
+            {confirmingBehaviorType === state.boundary.behaviorType && savingBehaviorType === null ? (
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="text-[11px] font-semibold text-[var(--foreground-muted)]">Record this?</span>
+                <button
+                  type="button"
+                  className="action-pill-outline min-h-9 px-3 text-[11px]"
+                  onClick={() => setConfirmingBehaviorType(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="action-pill min-h-9 px-3 text-[11px]"
+                  onClick={() => {
+                    setConfirmingBehaviorType(null);
+                    onLog(state.boundary.behaviorType);
+                  }}
+                >
+                  Record
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="action-pill min-h-10 shrink-0 px-3 text-xs disabled:opacity-60"
+                disabled={savingBehaviorType !== null}
+                onClick={() => state.boundary.intent === "CONTEXT_ONLY"
+                  ? onLog(state.boundary.behaviorType)
+                  : setConfirmingBehaviorType(state.boundary.behaviorType)}
+              >
+                {savingBehaviorType === state.boundary.behaviorType ? "Saving..." : actionLabel[state.boundary.behaviorType]}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      {message ? <p className="text-xs font-semibold text-[var(--foreground-muted)]" role="status">{message}</p> : null}
+    </section>
+  );
+}
 
 const statusLabels: Record<DailyExecutionStatus, string> = {
   pending: "Pending",
@@ -94,11 +182,14 @@ const statusIcons: Record<DailyExecutionStatus, LucideIcon> = {
   scheduled_rest: Clock3,
 };
 
-export function TodayExecution({ execution, completeWeeklyReminderAction }: TodayExecutionProps) {
+export function TodayExecution({ execution, completeWeeklyReminderAction, behaviorBoundaries, logBehaviorOccurrenceAction }: TodayExecutionProps) {
+  const router = useRouter();
   const [weeklyReminders, setWeeklyReminders] = useState(
     execution.weeklyReminders.reminders,
   );
   const [savingReminderId, setSavingReminderId] = useState<string | null>(null);
+  const [savingBehaviorType, setSavingBehaviorType] = useState<string | null>(null);
+  const [behaviorMessage, setBehaviorMessage] = useState<string | null>(null);
   const unresolvedItems = execution.items.filter((item) => item.status === "pending");
   const requiredItems = execution.items.filter(
     (item) => item.status !== "inactive" && item.status !== "scheduled_rest",
@@ -142,6 +233,31 @@ export function TodayExecution({ execution, completeWeeklyReminderAction }: Toda
     } finally {
       setSavingReminderId(null);
     }
+  }
+
+  async function logBehavior(behaviorType: BehaviorBoundaryState["boundary"]["behaviorType"]) {
+    if (!logBehaviorOccurrenceAction || savingBehaviorType) return;
+    setSavingBehaviorType(behaviorType);
+    setBehaviorMessage(null);
+    const result = await logBehaviorOccurrenceAction({
+      behaviorType,
+      occurredAt: new Date().toISOString(),
+      idempotencyKey: crypto.randomUUID(),
+    });
+    if (result.ok) {
+      const updated = result.data.dashboard.behaviorBoundaries.find((state) => state.boundary.behaviorType === behaviorType);
+      setBehaviorMessage(updated?.boundary.intent === "CONTEXT_ONLY"
+        ? "Outing recorded."
+        : updated?.latestEvaluation?.status === "VIOLATED" || updated?.latestEvaluation?.status === "REPEATED_VIOLATION"
+          ? "Recorded. Your boundary has been exceeded."
+          : updated?.boundary.mode === "ZERO_TOLERANCE" && updated.currentStreak === 0
+            ? "Recorded. Your streak has reset."
+            : "Recorded. You remain within your current boundary.");
+    } else {
+      setBehaviorMessage(result.message);
+    }
+    setSavingBehaviorType(null);
+    if (result.ok) router.refresh();
   }
 
   return (
@@ -207,6 +323,13 @@ export function TodayExecution({ execution, completeWeeklyReminderAction }: Toda
             reminders={enabledWeeklyReminders}
             savingReminderId={savingReminderId}
             onCompleteReminder={completeWeeklyReminder}
+          />
+
+          <BehaviorBoundariesToday
+            boundaries={behaviorBoundaries}
+            savingBehaviorType={savingBehaviorType}
+            message={behaviorMessage}
+            onLog={logBehavior}
           />
 
           <div className="grid gap-3 sm:grid-cols-2">

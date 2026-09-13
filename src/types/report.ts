@@ -7,6 +7,7 @@ import type {
   TargetRelationship,
   DirectionSignal,
 } from "@/domain/evolve-engine/types";
+import type { PerformanceOverviewSet } from "@/types/performance";
 
 export type ReportPeriodKey =
   | "today"
@@ -162,4 +163,5 @@ export type PeriodReport = {
 
 export type ReportsSnapshot = {
   periods: PeriodReport[];
+  performance: PerformanceOverviewSet;
 };

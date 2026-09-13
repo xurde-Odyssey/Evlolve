@@ -9,7 +9,7 @@ import { ImprovementsPreview } from "@/components/improvements/improvements-prev
 import { PageContainer } from "@/components/layout/page-container";
 import { DailyQuests } from "@/components/quests/daily-quests";
 import { getDashboardQuery } from "@/application/evolve/server/queries";
-import { completeWeeklyReminderAction } from "./actions";
+import { completeWeeklyReminderAction, logBehaviorOccurrenceAction } from "./actions";
 import { lookupBookMetadata } from "@/lib/books/open-library";
 import Image from "next/image";
 
@@ -37,6 +37,8 @@ export default async function DashboardPage() {
       <TodayExecution
         execution={dashboard.dailyExecution}
         completeWeeklyReminderAction={completeWeeklyReminderAction}
+        behaviorBoundaries={dashboard.behaviorBoundaries}
+        logBehaviorOccurrenceAction={logBehaviorOccurrenceAction}
       />
       <BossPreview challenge={dashboard.dashboardBoss} />
       <LatestAchievementPreview achievement={dashboard.latestAchievement} />

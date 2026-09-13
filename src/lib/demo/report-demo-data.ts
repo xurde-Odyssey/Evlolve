@@ -8,6 +8,7 @@ import type {
   ReportsSnapshot,
   TargetActualMetric,
 } from "@/types/report";
+import type { PerformanceOverviewSet } from "@/types/performance";
 import {
   calculateAverage,
   calculateBookCompletionDays,
@@ -493,7 +494,19 @@ export const demoReportsSnapshot = {
       },
     }),
   ],
+  performance: createDemoPerformance(),
 } satisfies ReportsSnapshot;
+
+function createDemoPerformance(): PerformanceOverviewSet {
+  const ranges = ["7D", "4W", "3M", "6M", "1Y", "ALL"] as const;
+  return Object.fromEntries(ranges.map((range) => [range, {
+    range,
+    granularity: range === "7D" ? "DAY" : range === "1Y" ? "MONTH" : range === "ALL" ? "YEAR" : "WEEK",
+    series: [],
+    contextEvents: [],
+    summary: { boundarySummary: { maintained: 0, total: 0 }, direction: "Stable" },
+  }])) as unknown as PerformanceOverviewSet;
+}
 
 function createPeriodReport({
   period,

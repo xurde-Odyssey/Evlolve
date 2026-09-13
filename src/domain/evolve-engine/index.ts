@@ -15,6 +15,7 @@ export * from "./boss/eligibility";
 export * from "./boss/policy";
 export * from "./boss/state";
 export * from "./behavior/debt";
+export * from "./behavior/boundaries";
 export * from "./behavior/friction";
 export * from "./behavior/interference";
 export * from "./behavior/restraint";

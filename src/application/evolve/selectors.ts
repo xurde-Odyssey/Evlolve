@@ -20,6 +20,9 @@ import {
   type DevelopmentPillar,
   type LevelProgressionState,
   analyzeAdaptiveIntelligence,
+  deriveBehaviorBoundaryState,
+  evaluateBehaviorBoundary,
+  type RestraintEvaluation,
 } from "../../domain/evolve-engine";
 import { defaultAchievementDefinitions } from "../../domain/evolve-engine/achievements/definitions";
 import { createDevelopmentAnalysis } from "../../domain/evolve-engine/analysis/development-analysis";
@@ -38,6 +41,13 @@ import type { ProfileSnapshot } from "../../types/profile";
 import { getMajorMilestoneProgress } from "./major-milestones";
 import type { DailyQuest, QuestStatus } from "../../types/quest";
 import type { PeriodReport, ReportsSnapshot } from "../../types/report";
+import type {
+  PerformanceContextEvent,
+  PerformanceOverview,
+  PerformanceOverviewSet,
+  PerformanceRange,
+  PerformanceSeries,
+} from "../../types/performance";
 import type { WeeklyReminderSnapshot } from "../../types/weekly-reminder";
 import {
   getCalendarBoundaryLabel,
@@ -54,6 +64,7 @@ import {
   getScheduledRequirementsForDate,
   isCommitmentScheduledOn,
 } from "./scheduling";
+import { summarizeConsistency } from "../../domain/evolve-engine/consistency/summary";
 import type { EvolveLocalState, ScheduledRequirement } from "./types";
 
 export type EvolveEngineProjection = {
@@ -66,6 +77,16 @@ export type EvolveEngineProjection = {
   bossEligibility: ReturnType<typeof evaluateBossEligibility>;
   achievements: ReturnType<typeof evaluateAchievements>["awards"];
 };
+
+export function getBehaviorBoundaryStates(state: EvolveLocalState) {
+  return state.behaviorBoundaries
+    .filter((boundary) => ["ACTIVE", "ESTABLISHED", "REOPENED"].includes(boundary.status))
+    .map((boundary) => deriveBehaviorBoundaryState({
+      boundary,
+      occurrences: state.behaviorOccurrences,
+      now: state.now,
+    }));
+}
 
 export function getEngineProjection(state: EvolveLocalState): EvolveEngineProjection {
   const activityStates = state.commitments.map((commitment) =>
@@ -82,8 +103,22 @@ export function getEngineProjection(state: EvolveLocalState): EvolveEngineProjec
     tier: commitment.tier.toUpperCase() as "CORE" | "PRIORITY" | "FLEXIBLE",
   }));
   const coreWeaknesses = detectCoreWeaknesses({ activityStates, commitments });
-  const behavioralFriction = deriveBehavioralFriction({ signals: [], restraintEvaluations: [] });
-  const behavioralDebt = deriveBehavioralDebt({ friction: behavioralFriction, restraintEvaluations: [] });
+  const boundaryStates = getBehaviorBoundaryStates(state);
+  const restraintEvaluations = boundaryStates
+    .filter((state) => state.boundary.category === "RESTRICTED")
+    .map((state): RestraintEvaluation => ({
+      contractId: state.boundary.id,
+      behaviorId: state.boundary.behaviorType,
+      status: state.latestEvaluation?.status === "NO_ACTIVE_BOUNDARY" || state.latestEvaluation?.status === "INSUFFICIENT_DATA" ? "NO_DATA" : state.latestEvaluation?.status ?? "NO_DATA",
+      occurrences: state.periodUsage,
+      allowedOccurrences: state.latestEvaluation?.limit ?? null,
+      violations: state.recentViolations,
+      adherence: state.pressure === "CLEAR" || state.pressure === "WATCH" ? 1 : 0,
+      confidence: state.latestEvaluation ? 0.9 : 0.2,
+      evidenceRefs: state.latestEvaluation?.evidenceRefs ?? [],
+    }));
+  const behavioralFriction = deriveBehavioralFriction({ signals: [], restraintEvaluations });
+  const behavioralDebt = deriveBehavioralDebt({ friction: behavioralFriction, restraintEvaluations });
   const pillarStates = buildPillarStates(activityStates);
   const developmentPressure = deriveDevelopmentPressure({ coreWeaknesses, interferenceSignals: [] });
   const rating = calculateProgressionRating({
@@ -176,6 +211,7 @@ export function getDashboardViewModel(state: EvolveLocalState) {
       currentBook: state.books.find((book) => book.status === "reading"),
       completedBooks: state.books.filter((book) => book.status === "completed").length,
     },
+    behaviorBoundaries: getBehaviorBoundaryStates(state),
   };
 }
 
@@ -661,7 +697,155 @@ export function getReportsViewModel(
     },
   };
 
-  return { periods: [period] };
+  return { periods: [period], performance: getPerformanceOverviewSet(state, projection) };
+}
+
+const performanceRanges: PerformanceRange[] = ["7D", "4W", "3M", "6M", "1Y", "ALL"];
+
+export function getPerformanceOverviewSet(
+  state: EvolveLocalState,
+  projection = getEngineProjection(state),
+): PerformanceOverviewSet {
+  return Object.fromEntries(
+    performanceRanges.map((range) => [range, getPerformanceOverview(state, range, projection)]),
+  ) as PerformanceOverviewSet;
+}
+
+function getPerformanceOverview(
+  state: EvolveLocalState,
+  range: PerformanceRange,
+  projection: EvolveEngineProjection,
+): PerformanceOverview {
+  const { granularity, count } = performanceShape(range);
+  const periods = createPerformancePeriods(state.now, granularity, count, range === "ALL");
+  const activitySeries: PerformanceSeries[] = state.commitments
+    .filter((commitment) => commitment.status === "active" || commitment.status === "completed")
+    .map((commitment) => ({
+      id: `activity:${commitment.id}`,
+      label: commitment.title,
+      kind: "ACTIVITY_CONSISTENCY" as const,
+      tier: commitment.tier,
+      points: periods.map((period) => {
+        if (new Date(commitment.startedAt).getTime() >= new Date(period.end).getTime()) {
+          return { ...period, value: null };
+        }
+        const evidence = state.evidence.filter((item) => {
+          const evidenceDate = item.scheduledFor ?? item.occurredAt;
+          return item.activityId === commitment.activityKey && typeof evidenceDate === "string" && inPeriod(evidenceDate, period.start, period.end);
+        });
+        const summary = evidence.length === 0 ? null : summarizeConsistency(evidence, {
+          activityId: commitment.activityKey,
+          periodLabel: period.label,
+          periodStart: period.start,
+          periodEnd: period.end,
+        });
+        return { ...period, value: summary?.consistencyRatio === null || summary === null ? null : Math.round(summary.consistencyRatio * 100), state: summary?.confidence !== undefined && summary.confidence < 0.35 ? "UNKNOWN" : undefined };
+      }),
+    }));
+
+  const boundarySeries: PerformanceSeries[] = state.behaviorBoundaries
+    .filter((boundary) => boundary.category === "RESTRICTED" && boundary.mode !== "CONTEXT_ONLY" && (["ACTIVE", "ESTABLISHED", "REOPENED"].includes(boundary.status) || state.behaviorOccurrences.some((occurrence) => occurrence.boundaryId === boundary.id)))
+    .map((boundary) => ({
+      id: `boundary:${boundary.id}`,
+      label: boundary.label,
+      kind: "BOUNDARY_ADHERENCE" as const,
+      points: periods.map((period) => {
+        if (new Date(boundary.startedAt).getTime() >= new Date(period.end).getTime()) return { ...period, value: null };
+        const periodEnd = new Date(new Date(period.end).getTime() - 1).toISOString();
+        const evaluation = evaluateBehaviorBoundary({
+          boundary,
+          occurrences: state.behaviorOccurrences.filter((occurrence) => occurrence.boundaryId === boundary.id),
+          occurredAt: periodEnd,
+        });
+        return { ...period, value: evaluation.adherencePercent ?? null, state: evaluation.status };
+      }),
+    }));
+
+  const series = [...activitySeries, ...boundarySeries];
+  const currentValues = activitySeries
+    .map((item) => ({ item, value: latestKnown(item) }))
+    .filter((item): item is { item: PerformanceSeries; value: number } => item.value !== null);
+  const coreOrPriority = currentValues.filter(({ item }) => item.tier === "core" || item.tier === "priority");
+  const attentionPool = coreOrPriority.length > 0 ? coreOrPriority : currentValues;
+  const strongest = currentValues.toSorted((a, b) => b.value - a.value)[0];
+  const weakest = attentionPool.toSorted((a, b) => a.value - b.value)[0];
+  const activeBoundaryIds = new Set(state.behaviorBoundaries.filter((boundary) => ["ACTIVE", "ESTABLISHED", "REOPENED"].includes(boundary.status)).map((boundary) => `boundary:${boundary.id}`));
+  const activeBoundaries = boundarySeries.filter((seriesItem) => activeBoundaryIds.has(seriesItem.id) && latestKnown(seriesItem) !== null);
+  const maintained = activeBoundaries.filter((seriesItem) => (latestKnown(seriesItem) ?? 0) >= 100).length;
+  const contextEvents = getPerformanceContextEvents(state, periods[0]?.start ?? state.now, periods.at(-1)?.end ?? state.now);
+
+  return {
+    range,
+    granularity,
+    series,
+    contextEvents,
+    summary: {
+      strongestActivity: strongest ? { id: strongest.item.id, label: strongest.item.label, consistency: strongest.value } : undefined,
+      primaryConstraint: weakest ? { id: weakest.item.id, label: weakest.item.label, consistency: weakest.value } : undefined,
+      boundarySummary: { maintained, total: activeBoundaries.length },
+      direction: levelDirectionLabel(projection.levelState),
+    },
+  };
+}
+
+function performanceShape(range: PerformanceRange) {
+  switch (range) {
+    case "7D": return { granularity: "DAY" as const, count: 7 };
+    case "4W": return { granularity: "WEEK" as const, count: 4 };
+    case "3M": return { granularity: "WEEK" as const, count: 13 };
+    case "6M": return { granularity: "WEEK" as const, count: 18 };
+    case "1Y": return { granularity: "MONTH" as const, count: 12 };
+    case "ALL": return { granularity: "YEAR" as const, count: 5 };
+  }
+}
+
+function createPerformancePeriods(now: string, granularity: "DAY" | "WEEK" | "MONTH" | "YEAR", count: number, all: boolean) {
+  const anchor = new Date(now);
+  const periods: Array<{ periodKey: string; periodStart: string; periodEnd: string; start: string; end: string; label: string; provisional?: boolean }> = [];
+  const total = all ? Math.max(1, count) : count;
+  for (let index = total - 1; index >= 0; index -= 1) {
+    const end = new Date(anchor);
+    if (granularity === "DAY") end.setUTCDate(end.getUTCDate() - index + 1);
+    if (granularity === "WEEK") end.setUTCDate(end.getUTCDate() - index * 7 + (7 - end.getUTCDay()));
+    if (granularity === "MONTH") {
+      end.setUTCDate(1);
+      end.setUTCMonth(end.getUTCMonth() - index + 1);
+    }
+    if (granularity === "YEAR") {
+      end.setUTCMonth(0, 1);
+      end.setUTCFullYear(end.getUTCFullYear() - index + 1);
+    }
+    const start = new Date(end);
+    if (granularity === "DAY") start.setUTCDate(start.getUTCDate() - 1);
+    if (granularity === "WEEK") start.setUTCDate(start.getUTCDate() - 7);
+    if (granularity === "MONTH") start.setUTCMonth(start.getUTCMonth() - 1);
+    if (granularity === "YEAR") start.setUTCFullYear(start.getUTCFullYear() - 1);
+    const periodStart = start.toISOString();
+    const periodEnd = end.toISOString();
+    periods.push({ periodKey: periodStart.slice(0, 10), periodStart, periodEnd, start: periodStart, end: periodEnd, label: granularity === "MONTH" ? start.toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" }) : granularity === "YEAR" ? start.toLocaleDateString("en-US", { year: "numeric", timeZone: "UTC" }) : start.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }), provisional: end > anchor });
+  }
+  return periods;
+}
+
+function inPeriod(value: string, start: string, end: string) {
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) && time >= new Date(start).getTime() && time < new Date(end).getTime();
+}
+
+function latestKnown(series: PerformanceSeries) {
+  return series.points.toReversed().find((point) => point.value !== null)?.value ?? null;
+}
+
+function getPerformanceContextEvents(state: EvolveLocalState, start: string, end: string): PerformanceContextEvent[] {
+  return state.behaviorOccurrences
+    .filter((occurrence) => occurrence.status === "ACTIVE" && inPeriod(occurrence.occurredAt, start, end))
+    .filter((occurrence) => occurrence.category === "CONTEXTUAL" || occurrence.evaluation?.status === "VIOLATED" || occurrence.evaluation?.status === "REPEATED_VIOLATION")
+    .map((occurrence) => ({
+      id: occurrence.id,
+      occurredAt: occurrence.occurredAt,
+      type: occurrence.category === "CONTEXTUAL" ? "SOCIAL_OUTING" as const : "BOUNDARY_VIOLATION" as const,
+      label: occurrence.category === "CONTEXTUAL" ? "Social outing" : "Boundary limit exceeded",
+    }));
 }
 
 export function getProfileViewModel(

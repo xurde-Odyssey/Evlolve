@@ -1,5 +1,7 @@
 import type {
   ActivityExecutionEvidence,
+  BehaviorBoundary,
+  BehaviorOccurrence,
   BossContract,
   BossHistoryRecord,
   CommitmentCapacityState,
@@ -110,6 +112,8 @@ export type EvolveLocalState = {
   weeklySnapshots: WeeklyDevelopmentSnapshot[];
   monthlySnapshots: MonthlyDevelopmentSnapshot[];
   monthlyEvaluations: MonthlyEvaluationRecord[];
+  behaviorBoundaries: BehaviorBoundary[];
+  behaviorOccurrences: BehaviorOccurrence[];
   currentLevel: number;
   highestLevel: HighestLevelRecord;
   candidate?: LevelCandidateState;

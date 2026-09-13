@@ -19,6 +19,8 @@ import type {
   RecommendationHistoryRecord,
   WeeklyDevelopmentSnapshot,
   XpTransaction,
+  BehaviorBoundary,
+  BehaviorOccurrence,
 } from "@/domain/evolve-engine";
 import type { ActivityRecord } from "@/types/activity";
 import type { Book } from "@/types/book";
@@ -45,6 +47,8 @@ import {
   learningTrackToRow,
   majorMilestoneToRow,
   notepadNoteToRow,
+  behaviorBoundaryToRow,
+  behaviorOccurrenceToRow,
   type DomainIdRow,
   type PayloadRow,
 } from "./evolve-mappers";
@@ -141,6 +145,8 @@ export class SupabaseEvolveStateRepository {
       journeyEvents,
       weeklySnapshots,
       monthlySnapshots,
+      behaviorBoundaries,
+      behaviorOccurrences,
       progressionState,
       capacityState,
     ] = await Promise.all([
@@ -160,6 +166,8 @@ export class SupabaseEvolveStateRepository {
       this.selectPayloads<JourneyProgressionEvent>("journey_events", userId),
       this.selectPayloads<WeeklyDevelopmentSnapshot>("weekly_development_snapshots", userId),
       this.selectPayloads<MonthlyDevelopmentSnapshot>("monthly_development_snapshots", userId),
+      this.selectBehaviorBoundaries(userId),
+      this.selectBehaviorOccurrences(userId),
       this.getProgressionState(userId),
       this.getCapacityState(userId),
     ]);
@@ -209,6 +217,8 @@ export class SupabaseEvolveStateRepository {
       journeyEvents,
       weeklySnapshots,
       monthlySnapshots,
+      behaviorBoundaries,
+      behaviorOccurrences,
       currentLevel: progressionState?.currentLevel ?? state.currentLevel,
       highestLevel: progressionState?.highestLevel ?? state.highestLevel,
       candidate: progressionState?.candidate,
@@ -237,6 +247,8 @@ export class SupabaseEvolveStateRepository {
       recommendations,
       achievements,
       titles,
+      behaviorBoundaries,
+      behaviorOccurrences,
       progressionState,
       capacityState,
     ] = await Promise.all([
@@ -250,6 +262,8 @@ export class SupabaseEvolveStateRepository {
       this.selectPayloads<RecommendationHistoryRecord>("recommendations", userId),
       this.selectPayloads<AchievementAward>("achievement_awards", userId),
       this.selectPayloads<EarnedTitleRecord>("title_awards", userId),
+      this.selectBehaviorBoundaries(userId),
+      this.selectBehaviorOccurrences(userId, recentSince),
       this.getProgressionState(userId),
       this.getCapacityState(userId),
     ]);
@@ -279,6 +293,8 @@ export class SupabaseEvolveStateRepository {
       recommendations,
       achievements,
       titles,
+      behaviorBoundaries,
+      behaviorOccurrences,
       currentLevel: progressionState?.currentLevel ?? state.currentLevel,
       highestLevel: progressionState?.highestLevel ?? state.highestLevel,
       candidate: progressionState?.candidate,
@@ -320,6 +336,16 @@ export class SupabaseEvolveStateRepository {
     await this.upsertPayloadRows(
       "notepad_notes",
       state.notepadNotes.map((note) => notepadNoteToRow(userId, note)),
+      "user_id,domain_id",
+    );
+    await this.upsertPayloadRows(
+      "restraint_contracts",
+      state.behaviorBoundaries.map((boundary) => behaviorBoundaryToRow(userId, boundary)),
+      "user_id,domain_id",
+    );
+    await this.upsertPayloadRows(
+      "behavior_events",
+      state.behaviorOccurrences.map((occurrence) => behaviorOccurrenceToRow(userId, occurrence)),
       "user_id,domain_id",
     );
     const noteDelete = this.client
@@ -478,6 +504,22 @@ export class SupabaseEvolveStateRepository {
     throwIfError(response.error);
   }
 
+  async saveBehaviorBoundary(userId: string, boundary: BehaviorBoundary) {
+    await this.ensureProfile(userId);
+    const response = await this.client
+      .from("restraint_contracts")
+      .upsert(behaviorBoundaryToRow(userId, boundary), { onConflict: "user_id,domain_id" });
+    throwIfError(response.error);
+  }
+
+  async saveBehaviorOccurrence(userId: string, occurrence: BehaviorOccurrence) {
+    await this.ensureProfile(userId);
+    const response = await this.client
+      .from("behavior_events")
+      .upsert(behaviorOccurrenceToRow(userId, occurrence), { onConflict: "user_id,domain_id" });
+    throwIfError(response.error);
+  }
+
   async recordCloseout({
     userId,
     periodType,
@@ -559,6 +601,34 @@ export class SupabaseEvolveStateRepository {
     return rows
       .map((row) => fromJson<TValue>(row.domain_payload))
       .filter((item): item is TValue => item !== null);
+  }
+
+  private async selectBehaviorBoundaries(userId: string): Promise<BehaviorBoundary[]> {
+    const response = await this.client
+      .from("restraint_contracts")
+      .select("domain_id, domain_payload")
+      .eq("user_id", userId)
+      .not("domain_id", "is", null);
+    throwIfError(response.error);
+    return ((response.data ?? []) as Array<PayloadRow & { domain_id: string | null }>)
+      .filter((row) => Boolean(row.domain_id))
+      .map((row) => fromJson<BehaviorBoundary>(row.domain_payload))
+      .filter((item): item is BehaviorBoundary => item !== null && "behaviorType" in item && "version" in item);
+  }
+
+  private async selectBehaviorOccurrences(userId: string, since?: string): Promise<BehaviorOccurrence[]> {
+    let query = this.client
+      .from("behavior_events")
+      .select("domain_id, domain_payload")
+      .eq("user_id", userId)
+      .not("domain_id", "is", null);
+    if (since) query = query.gte("occurred_at", since);
+    const response = await query;
+    throwIfError(response.error);
+    return ((response.data ?? []) as Array<PayloadRow & { domain_id: string | null }>)
+      .filter((row) => Boolean(row.domain_id))
+      .map((row) => fromJson<BehaviorOccurrence>(row.domain_payload))
+      .filter((item): item is BehaviorOccurrence => item !== null && "behaviorType" in item && "status" in item);
   }
 
   private async selectPayloadsSince<TValue>(

@@ -53,8 +53,10 @@ import type {
 } from "@/types/settings";
 import type { WeeklyReminder } from "@/types/weekly-reminder";
 import type { LearningTrack } from "@/types/learning-track";
+import { deriveBehaviorBoundaryState, type BehaviorBoundary, type BehaviorOccurrence, type BehaviorType } from "@/domain/evolve-engine";
 import type {
   BookaholicActivationInput,
+  BehaviorBoundaryInput,
   LearningTrackInput,
   ServerCommandResponse,
   WeeklyReminderInput,
@@ -88,6 +90,16 @@ type SettingsWorkspaceProps = {
   archiveLearningTrackAction?: (
     trackId: string,
   ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  behaviorBoundaries: BehaviorBoundary[];
+  behaviorOccurrences: BehaviorOccurrence[];
+  createBehaviorBoundaryAction?: (
+    input: BehaviorBoundaryInput,
+  ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  correctBehaviorOccurrenceAction?: (
+    occurrenceId: string,
+    correction: "CORRECTED" | "VOIDED",
+  ) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  behaviorNow: string;
 };
 
 const weekdayLabels: Record<Weekday, string> = {
@@ -164,6 +176,11 @@ export function SettingsWorkspace({
   createLearningTrackAction,
   completeLearningTrackAction,
   archiveLearningTrackAction,
+  behaviorBoundaries,
+  behaviorOccurrences,
+  createBehaviorBoundaryAction,
+  correctBehaviorOccurrenceAction,
+  behaviorNow,
 }: SettingsWorkspaceProps) {
   const router = useRouter();
   const [activities, setActivities] = useState(snapshot.activityConfigurations);
@@ -484,7 +501,13 @@ export function SettingsWorkspace({
           />
           <SystemManagedPanel snapshot={snapshot} />
           <OfflineState />
-          <BehaviorBoundariesPanel />
+          <BehaviorBoundariesPanel
+            boundaries={behaviorBoundaries}
+            occurrences={behaviorOccurrences}
+            onCreate={createBehaviorBoundaryAction}
+            onCorrect={correctBehaviorOccurrenceAction}
+            now={behaviorNow}
+          />
           <CustomActivityPanel
             customActivity={customActivity}
             onChange={setCustomActivity}
@@ -612,18 +635,75 @@ export function SettingsWorkspace({
   );
 }
 
-function BehaviorBoundariesPanel() {
+function BehaviorBoundariesPanel({
+  boundaries,
+  occurrences,
+  onCreate,
+  onCorrect,
+  now,
+}: {
+  boundaries: BehaviorBoundary[];
+  occurrences: BehaviorOccurrence[];
+  onCreate?: (input: BehaviorBoundaryInput) => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  onCorrect?: (occurrenceId: string, correction: "CORRECTED" | "VOIDED") => Promise<EvolveServerActionResult<ServerCommandResponse>>;
+  now: string;
+}) {
+  const router = useRouter();
   const [openForm, setOpenForm] = useState<"social" | "boundary" | null>(null);
-  const [socialType, setSocialType] = useState("Social outing");
-  const [socialNotes, setSocialNotes] = useState("");
-  const [boundaryName, setBoundaryName] = useState("");
-  const [boundaryMode, setBoundaryMode] = useState("ZERO");
+  const [boundaryName, setBoundaryName] = useState<BehaviorType>("SMOKING");
+  const [boundaryMode, setBoundaryMode] = useState<BehaviorBoundaryInput["mode"]>("ZERO_TOLERANCE");
   const [boundaryLimit, setBoundaryLimit] = useState("1");
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [editingBoundaryId, setEditingBoundaryId] = useState<string | null>(null);
+  const [correctingOccurrenceId, setCorrectingOccurrenceId] = useState<string | null>(null);
+
+  const activeBoundaryStates = boundaries
+    .filter((boundary) => ["ACTIVE", "ESTABLISHED", "REOPENED"].includes(boundary.status))
+    .map((boundary) => deriveBehaviorBoundaryState({ boundary, occurrences, now }));
+  const socialBoundary = activeBoundaryStates.find((state) => state.boundary.behaviorType === "SOCIAL_OUTING");
 
   function showSavedMessage(message: string) {
     setSavedMessage(message);
     setOpenForm(null);
+  }
+
+  async function saveBoundary(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!onCreate || saving) return;
+
+    const numericLimit = Number(boundaryLimit);
+    const limitConfig: BehaviorBoundaryInput["limitConfig"] =
+      boundaryMode === "WEEKLY_CAP"
+        ? { cap: numericLimit, period: "WEEK" }
+        : boundaryMode === "MONTHLY_CAP"
+          ? { cap: numericLimit, period: "MONTH" }
+          : boundaryMode === "QUANTITY_LIMIT"
+            ? { quantity: numericLimit, period: "DAY" }
+            : boundaryMode === "MINIMUM_SPACING"
+              ? { spacingDays: numericLimit, period: "DAY" }
+              : {};
+
+    setSaving(true);
+    const result = await onCreate({
+      behaviorType: boundaryName,
+      label: boundaryName === "SOCIAL_OUTING" ? "Social Outing" : undefined,
+      intent: boundaryName === "SOCIAL_OUTING" ? "CONTEXT_ONLY" : boundaryMode === "ZERO_TOLERANCE" ? "QUIT" : "REDUCE",
+      mode: boundaryName === "SOCIAL_OUTING" ? "CONTEXT_ONLY" : boundaryMode,
+      limitConfig,
+      replaceBoundaryId: editingBoundaryId ?? undefined,
+    });
+    setSaving(false);
+    if (result.ok) {
+      showSavedMessage(`${boundaryName.replaceAll("_", " ")} boundary saved.`);
+      setEditingBoundaryId(null);
+      setBoundaryName("SMOKING");
+      setBoundaryMode("ZERO_TOLERANCE");
+      setBoundaryLimit("1");
+      router.refresh();
+    } else {
+      setSavedMessage(result.message);
+    }
   }
 
   return (
@@ -647,6 +727,66 @@ function BehaviorBoundariesPanel() {
         </div>
       </div>
 
+      <section className="space-y-3" aria-labelledby="active-boundaries-title">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p id="active-boundaries-title" className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">Active boundaries</p>
+            <p className="mt-1 text-xs text-[var(--foreground-muted)]">Your current standards and how they are holding.</p>
+          </div>
+          <span className="text-xs font-semibold text-[var(--foreground-muted)]">{activeBoundaryStates.filter((state) => state.boundary.category === "RESTRICTED").length}/5 serious</span>
+        </div>
+        {activeBoundaryStates.length === 0 ? (
+          <div className="rounded-md border border-dashed border-[var(--border)] px-4 py-5 text-center">
+            <p className="text-sm font-semibold text-[var(--foreground)]">No personal boundaries set.</p>
+            <p className="mt-1 text-xs text-[var(--foreground-muted)]">Set a limit for something you want to quit or control.</p>
+          </div>
+        ) : activeBoundaryStates.map((boundaryState) => {
+          const boundary = boundaryState.boundary;
+          return (
+            <div key={boundary.id} className="rounded-md border border-[var(--border)] bg-[var(--background)] p-3">
+              <div className="flex items-start gap-3">
+                {boundary.category === "CONTEXTUAL" ? <UsersRound aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-[var(--foreground-muted)]" /> : <Ban aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-[var(--accent-pro)]" />}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">{boundary.label}</p>
+                    <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--foreground-muted)]">{boundary.status}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--foreground-muted)]">{boundaryRuleLabel(boundary)}</p>
+                  <p className="mt-2 text-xs font-semibold text-[var(--foreground)]">{boundary.category === "CONTEXTUAL" ? "Context only" : boundaryUsageLabel(boundaryState)}</p>
+                </div>
+                {boundary.category === "RESTRICTED" ? <button type="button" className="rounded-md border border-[var(--border)] px-2.5 py-1.5 text-xs font-semibold text-[var(--foreground)] hover:border-[var(--accent)] hover:text-[var(--accent)]" onClick={() => {
+                  setEditingBoundaryId(boundary.id);
+                  setBoundaryName(boundary.behaviorType);
+                  setBoundaryMode(boundary.mode);
+                  setBoundaryLimit(String(boundary.limitConfig.cap ?? boundary.limitConfig.quantity ?? boundary.limitConfig.spacingDays ?? 1));
+                  setOpenForm("boundary");
+                  setSavedMessage(null);
+                }}>Edit</button> : <span className="text-xs font-semibold text-[var(--foreground-muted)]">Enabled</span>}
+              </div>
+              {boundaryState.currentStreak > 0 && boundary.category === "RESTRICTED" ? <p className="mt-2 pl-7 text-xs text-[var(--foreground-muted)]">Current streak: {boundaryState.currentStreak} {boundary.mode === "ZERO_TOLERANCE" ? "days" : "recorded occurrences"} · Best: {boundaryState.bestStreak}</p> : null}
+            </div>
+          );
+        })}
+      </section>
+
+      {occurrences.filter((occurrence) => occurrence.status === "ACTIVE").length > 0 ? (
+        <section className="space-y-2" aria-labelledby="behavior-history-title">
+          <div className="flex items-center justify-between"><p id="behavior-history-title" className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">Recent history</p><span className="text-xs text-[var(--foreground-muted)]">Corrections preserve the record</span></div>
+          <div className="divide-y divide-[var(--border)] rounded-md border border-[var(--border)] bg-[var(--background)]">
+            {occurrences.filter((occurrence) => occurrence.status === "ACTIVE").toReversed().slice(0, 5).map((occurrence) => (
+              <div key={occurrence.id} className="flex items-center gap-3 px-3 py-2.5">
+                <div className="min-w-0 flex-1"><p className="text-xs font-semibold text-[var(--foreground)]">{behaviorTypeLabel(occurrence.behaviorType)}</p><p className="text-[11px] text-[var(--foreground-muted)]">{new Date(occurrence.occurredAt).toLocaleDateString()} · {occurrence.evaluation?.status?.replaceAll("_", " ") ?? "Recorded"}</p></div>
+                <button type="button" className="text-xs font-semibold text-[var(--foreground-muted)] hover:text-[var(--accent)] disabled:opacity-50" disabled={!onCorrect || correctingOccurrenceId !== null} onClick={async () => { if (!onCorrect) return; setCorrectingOccurrenceId(occurrence.id); const result = await onCorrect(occurrence.id, "VOIDED"); setCorrectingOccurrenceId(null); setSavedMessage(result.ok ? "Occurrence corrected." : result.message); if (result.ok) router.refresh(); }}>Correct</button>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase text-[var(--foreground-muted)]">Add a boundary</p>
+        <span className="text-xs text-[var(--foreground-muted)]">Applies going forward</span>
+      </div>
       <div className="grid gap-3">
         <div className="rounded-md border border-[var(--border)] bg-[var(--background)] p-3">
           <div className="flex items-center gap-3">
@@ -668,48 +808,41 @@ function BehaviorBoundariesPanel() {
             type="button"
             className="ml-auto inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
             aria-label="Add social outing"
-            aria-expanded={openForm === "social"}
+            aria-expanded={!socialBoundary && openForm === "social"}
+            disabled={Boolean(socialBoundary)}
             onClick={() => {
               setSavedMessage(null);
               setOpenForm(openForm === "social" ? null : "social");
             }}
           >
-            {openForm === "social" ? <ChevronDown className="size-4" aria-hidden="true" /> : <Plus className="size-4" aria-hidden="true" />}
+            {socialBoundary ? <Check className="size-4" aria-hidden="true" /> : openForm === "social" ? <ChevronDown className="size-4" aria-hidden="true" /> : <Plus className="size-4" aria-hidden="true" />}
           </button>
           </div>
-          {openForm === "social" ? (
+          {openForm === "social" && !socialBoundary ? (
             <form
               className="mt-4 grid gap-3 border-t border-[var(--border)] pt-4"
-              onSubmit={(event) => {
+              onSubmit={async (event) => {
                 event.preventDefault();
-                showSavedMessage(`${socialType} added to your behavior context.`);
-                setSocialNotes("");
+                if (!onCreate || saving) return;
+                setSaving(true);
+                const result = await onCreate({
+                  behaviorType: "SOCIAL_OUTING",
+                  label: "Social Outing",
+                  intent: "CONTEXT_ONLY",
+                  mode: "CONTEXT_ONLY",
+                  limitConfig: {},
+                });
+                setSaving(false);
+                if (result.ok) {
+                  showSavedMessage("Social Outing context is ready to log from Today.");
+                  router.refresh();
+                }
+                else setSavedMessage(result.message);
               }}
             >
-              <label className="grid gap-1.5 text-xs font-semibold text-[var(--foreground-muted)]">
-                What happened?
-                <select
-                  value={socialType}
-                  onChange={(event) => setSocialType(event.target.value)}
-                  className="min-h-11 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
-                >
-                  <option>Social outing</option>
-                  <option>Late night</option>
-                  <option>Recreation</option>
-                </select>
-              </label>
-              <label className="grid gap-1.5 text-xs font-semibold text-[var(--foreground-muted)]">
-                Note <span className="font-normal">(optional)</span>
-                <input
-                  value={socialNotes}
-                  onChange={(event) => setSocialNotes(event.target.value)}
-                  placeholder="Add useful context"
-                  className="min-h-11 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--foreground)] outline-none placeholder:text-[var(--foreground-muted)] focus:border-[var(--accent)]"
-                />
-              </label>
               <div className="flex justify-end">
-                <Button type="submit" className="min-h-10 px-3 text-xs">
-                  Record context
+                <Button type="submit" className="min-h-10 px-3 text-xs" disabled={saving || !onCreate}>
+                  {saving ? "Saving..." : "Enable context logging"}
                 </Button>
               </div>
             </form>
@@ -748,36 +881,36 @@ function BehaviorBoundariesPanel() {
           {openForm === "boundary" ? (
             <form
               className="mt-4 grid gap-3 border-t border-[var(--border)] pt-4"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (!boundaryName.trim()) return;
-                showSavedMessage(`${boundaryName.trim()} boundary added.`);
-              }}
+              onSubmit={saveBoundary}
             >
               <label className="grid gap-1.5 text-xs font-semibold text-[var(--foreground-muted)]">
                 What do you want to change?
-                <input
-                  required
+                <select
                   value={boundaryName}
-                  onChange={(event) => setBoundaryName(event.target.value)}
-                  placeholder="For example, alcohol or gaming"
+                  onChange={(event) => setBoundaryName(event.target.value as BehaviorType)}
                   className="min-h-11 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--foreground)] outline-none placeholder:text-[var(--foreground-muted)] focus:border-[var(--accent)]"
-                />
+                >
+                  <option value="SMOKING">Puffing</option>
+                  <option value="DRINKING">Drinking</option>
+                  <option value="LATE_NIGHT">Late night</option>
+                </select>
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="grid gap-1.5 text-xs font-semibold text-[var(--foreground-muted)]">
                   Boundary
                   <select
                     value={boundaryMode}
-                    onChange={(event) => setBoundaryMode(event.target.value)}
+                    onChange={(event) => setBoundaryMode(event.target.value as BehaviorBoundaryInput["mode"])}
                     className="min-h-11 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
                   >
-                    <option value="ZERO">Quit completely</option>
-                    <option value="FREQUENCY_CAP">Limit per week</option>
-                    <option value="QUANTITY_CAP">Limit quantity</option>
+                    <option value="ZERO_TOLERANCE">Quit completely</option>
+                    <option value="WEEKLY_CAP">Limit per week</option>
+                    <option value="MONTHLY_CAP">Limit per month</option>
+                    <option value="MINIMUM_SPACING">Minimum spacing</option>
+                    <option value="QUANTITY_LIMIT">Daily quantity limit</option>
                   </select>
                 </label>
-                {boundaryMode !== "ZERO" ? (
+                {boundaryMode !== "ZERO_TOLERANCE" && boundaryMode !== "CONTEXT_ONLY" ? (
                   <label className="grid gap-1.5 text-xs font-semibold text-[var(--foreground-muted)]">
                     Allowed amount
                     <input
@@ -791,8 +924,8 @@ function BehaviorBoundariesPanel() {
                 ) : null}
               </div>
               <div className="flex justify-end">
-                <Button type="submit" className="min-h-10 px-3 text-xs">
-                  Set boundary
+                  <Button type="submit" className="min-h-10 px-3 text-xs" disabled={saving || !onCreate}>
+                  {saving ? "Saving..." : "Set boundary"}
                 </Button>
               </div>
             </form>
@@ -806,6 +939,37 @@ function BehaviorBoundariesPanel() {
       ) : null}
     </Card>
   );
+}
+
+function behaviorTypeLabel(type: BehaviorType) {
+  return type === "LATE_NIGHT" ? "Late Night" : type === "SOCIAL_OUTING" ? "Social Outing" : type === "DRINKING" ? "Drinking" : type === "SMOKING" ? "Puffing" : "Behavior";
+}
+
+function boundaryRuleLabel(boundary: BehaviorBoundary) {
+  if (boundary.intent === "CONTEXT_ONLY") return "Context tracking";
+  if (boundary.mode === "ZERO_TOLERANCE") return "Quit completely · zero tolerance";
+  if (boundary.mode === "WEEKLY_CAP") return `Maximum ${boundary.limitConfig.cap ?? 0} time${boundary.limitConfig.cap === 1 ? "" : "s"} / week`;
+  if (boundary.mode === "MONTHLY_CAP") return `Maximum ${boundary.limitConfig.cap ?? 0} time${boundary.limitConfig.cap === 1 ? "" : "s"} / month`;
+  if (boundary.mode === "MINIMUM_SPACING") return `Minimum ${boundary.limitConfig.spacingDays ?? 0} days between occurrences`;
+  return `Maximum ${boundary.limitConfig.quantity ?? 0}${boundary.limitConfig.unit ? ` ${boundary.limitConfig.unit}` : ""} / day`;
+}
+
+function boundaryUsageLabel(state: ReturnType<typeof deriveBehaviorBoundaryState>) {
+  const evaluation = state.latestEvaluation;
+  if (state.boundary.mode === "ZERO_TOLERANCE") return `${state.currentStreak} days without a recorded occurrence · ${pressureLabel(state.pressure)}`;
+  const limit = evaluation?.limit;
+  return `${state.periodUsage}${limit === undefined ? " recorded" : ` / ${limit}`} · ${statusLabel(evaluation?.status)}`;
+}
+
+function pressureLabel(pressure: ReturnType<typeof deriveBehaviorBoundaryState>["pressure"]) {
+  return pressure === "CLEAR" ? "Clear" : pressure.charAt(0) + pressure.slice(1).toLowerCase();
+}
+
+function statusLabel(status?: string) {
+  if (!status || status === "NO_ACTIVE_BOUNDARY") return "Recorded";
+  if (status === "WITHIN_LIMIT") return "Within limit";
+  if (status === "APPROACHING_LIMIT") return "Watch";
+  return status === "REPEATED_VIOLATION" ? "High" : "Elevated";
 }
 
 function WeeklyRemindersPanel({
