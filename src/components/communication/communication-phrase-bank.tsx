@@ -1,0 +1,65 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { Archive, BookOpen, Plus, RotateCcw, Search, X } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import type { CommunicationPhrase, CommunicationPhraseStatus } from "@/types/communication";
+
+const statuses: Array<"ALL" | CommunicationPhraseStatus> = ["ALL", "NEW", "LEARNING", "PRACTICING", "MASTERED"];
+
+export function CommunicationPhraseBank() {
+  const [phrases, setPhrases] = useState<CommunicationPhrase[]>([]);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<(typeof statuses)[number]>("ALL");
+  const [sort, setSort] = useState("due");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [selected, setSelected] = useState<CommunicationPhrase | null>(null);
+  const [now] = useState(() => Date.now());
+
+  useEffect(() => {
+    fetch("/api/communication/phrases", { cache: "no-store" }).then(async (response) => {
+      const data = await response.json() as { phrases?: CommunicationPhrase[]; error?: string };
+      setPhrases(data.phrases ?? []);
+      setError(response.ok ? null : data.error ?? "Phrases could not be loaded.");
+      setLoading(false);
+    }).catch(() => { setError("Phrases could not be loaded."); setLoading(false); });
+  }, []);
+
+  const visible = useMemo(() => phrases.filter((phrase) => (filter === "ALL" || phrase.status === filter) && [phrase.phrase, phrase.meaning, phrase.personalNote ?? ""].join(" ").toLocaleLowerCase().includes(query.toLocaleLowerCase())).sort((a, b) => sort === "az" ? a.phrase.localeCompare(b.phrase) : sort === "recent" ? Date.parse(b.createdAt ?? "") - Date.parse(a.createdAt ?? "") : Date.parse(a.nextReviewAt ?? "9999") - Date.parse(b.nextReviewAt ?? "9999")), [filter, phrases, query, sort]);
+
+  async function archive(id: string) {
+    const response = await fetch(`/api/communication/phrases/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ isArchived: true }) });
+    if (response.ok) { setPhrases((current) => current.filter((phrase) => phrase.id !== id)); setSelected(null); }
+  }
+
+  return <div className="space-y-5">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm text-[var(--foreground-muted)]">Recognize, understand, recall, then use.</p><p className="mt-1 text-xs text-[var(--foreground-muted)]">{phrases.filter((phrase) => phrase.nextReviewAt && Date.parse(phrase.nextReviewAt) <= now).length} phrases due for review</p></div><div className="flex flex-wrap gap-2"><Link href="/communication/phrases/practice" className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[var(--primary)] px-3 text-sm font-semibold text-[var(--primary-foreground)]"><RotateCcw aria-hidden="true" className="size-4" /> Practice Phrases</Link><Button variant="secondary" onClick={() => setShowAdd(true)}><Plus aria-hidden="true" className="mr-2 size-4" /> Add phrase</Button></div></div>
+    {error ? <Card><p role="alert" className="text-sm text-[var(--foreground)]">{error}</p><p className="mt-1 text-xs text-[var(--foreground-muted)]">Your saved phrases require an authenticated Evolve session.</p></Card> : null}
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">{statuses.map((status) => <button type="button" key={status} onClick={() => setFilter(status)} className={`rounded-md border p-3 text-left transition ${filter === status ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]" : "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--foreground)]"}`}><p className="text-[10px] font-semibold uppercase">{status === "ALL" ? "All" : status}</p><p className="mt-1 text-lg font-semibold">{status === "ALL" ? phrases.length : phrases.filter((phrase) => phrase.status === status).length}</p></button>)}</div>
+    <div className="flex flex-col gap-2 sm:flex-row"><label className="relative flex-1"><Search aria-hidden="true" className="absolute left-3 top-3 size-4 text-[var(--foreground-muted)]" /><span className="sr-only">Search phrases</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search phrases, meanings, or notes" className="min-h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] pl-9 pr-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--foreground)]" /></label><label className="flex min-h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm"><span className="sr-only">Sort phrases</span><select value={sort} onChange={(event) => setSort(event.target.value)} className="bg-transparent text-[var(--foreground)] outline-none"><option value="due">Needs review</option><option value="recent">Recently added</option><option value="az">A-Z</option></select></label></div>
+    {loading ? <Card><p className="text-sm text-[var(--foreground-muted)]">Loading Phrase Bank...</p></Card> : visible.length ? <div className="grid gap-4 lg:grid-cols-2">{visible.map((phrase) => <PhraseCard key={phrase.id} phrase={phrase} now={now} onOpen={() => setSelected(phrase)} onArchive={() => void archive(phrase.id)} />)}</div> : <EmptyPhraseState onAdd={() => setShowAdd(true)} />}
+    {showAdd ? <AddPhraseDialog onClose={() => setShowAdd(false)} onSaved={(phrase) => { setPhrases((current) => [phrase, ...current]); setShowAdd(false); }} /> : null}
+    {selected ? <PhraseDetail phrase={selected} onClose={() => setSelected(null)} onArchive={() => void archive(selected.id)} /> : null}
+  </div>;
+}
+
+function PhraseCard({ phrase, now, onOpen, onArchive }: { phrase: CommunicationPhrase; now: number; onOpen: () => void; onArchive: () => void }) {
+  const due = phrase.nextReviewAt && Date.parse(phrase.nextReviewAt) <= now;
+  return <Card className="space-y-4"><div className="flex items-start justify-between gap-3"><button type="button" onClick={onOpen} className="text-left"><p className="text-xl font-semibold text-[var(--foreground)]">&ldquo;{phrase.phrase}&rdquo;</p><p className="mt-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--foreground-muted)]">{phrase.status}</p></button><BookOpen aria-hidden="true" className="size-4 text-[var(--foreground-muted)]" /></div><p className="line-clamp-2 text-sm leading-6 text-[var(--foreground-muted)]">{phrase.shortMeaning || phrase.meaning || "Meaning can be added as you practice this phrase."}</p><div className="flex items-center justify-between gap-3 border-t border-[var(--border)] pt-3"><span className={`text-xs ${due ? "font-semibold text-[var(--foreground)]" : "text-[var(--foreground-muted)]"}`}>{due ? "Due for review" : phrase.lastPracticedAt ? `Practiced ${formatDate(phrase.lastPracticedAt)}` : "New phrase"}</span><div className="flex gap-2"><button type="button" onClick={onArchive} aria-label={`Archive ${phrase.phrase}`} className="inline-flex size-9 items-center justify-center rounded-md border border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--foreground)] hover:text-[var(--foreground)]"><Archive aria-hidden="true" className="size-4" /></button><Link href="/communication/phrases/practice" className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[var(--border)] px-3 text-xs font-semibold text-[var(--foreground)] hover:border-[var(--foreground)]"><RotateCcw aria-hidden="true" className="size-3.5" /> Practice</Link></div></div></Card>;
+}
+
+function AddPhraseDialog({ onClose, onSaved }: { onClose: () => void; onSaved: (phrase: CommunicationPhrase) => void }) {
+  const [phrase, setPhrase] = useState(""); const [meaning, setMeaning] = useState(""); const [example, setExample] = useState(""); const [note, setNote] = useState(""); const [error, setError] = useState<string | null>(null); const [saving, setSaving] = useState(false);
+  async function save() { setSaving(true); const response = await fetch("/api/communication/phrases", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ phrase, meaning, example, personalNote: note }) }); const data = await response.json() as { phrase?: CommunicationPhrase; error?: string }; if (!response.ok || !data.phrase) setError(data.error ?? "Phrase could not be saved."); else onSaved(data.phrase); setSaving(false); }
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"><Card className="w-full max-w-lg space-y-4"><div className="flex items-center justify-between"><h2 className="text-xl font-semibold text-[var(--foreground)]">Add a phrase</h2><button type="button" onClick={onClose} aria-label="Close"><X className="size-5" /></button></div><Field label="Phrase" value={phrase} onChange={setPhrase} placeholder="e.g. fair enough" /><Field label="Meaning (optional)" value={meaning} onChange={setMeaning} placeholder="What does it mean in conversation?" /><Field label="Example (optional)" value={example} onChange={setExample} placeholder="Use it in a natural sentence" /><Field label="Personal note (optional)" value={note} onChange={setNote} placeholder="Where might you use it?" />{error ? <p role="alert" className="text-sm text-[var(--foreground)]">{error}</p> : null}<div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void save()} disabled={!phrase.trim() || saving}>{saving ? "Saving..." : "Save phrase"}</Button></div></Card></div>;
+}
+
+function PhraseDetail({ phrase, onClose, onArchive }: { phrase: CommunicationPhrase; onClose: () => void; onArchive: () => void }) { return <div className="fixed inset-0 z-40 flex justify-end bg-black/25"><aside className="h-full w-full max-w-lg overflow-y-auto border-l border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl sm:p-7"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--primary)]">Phrase detail</p><h2 className="mt-2 text-2xl font-semibold text-[var(--foreground)]">&ldquo;{phrase.phrase}&rdquo;</h2></div><button type="button" onClick={onClose} aria-label="Close phrase detail"><X className="size-5" /></button></div><div className="mt-7 space-y-5"><DetailItem label="Meaning" value={phrase.meaning || "Meaning will be enriched as evidence is collected."} /><DetailItem label="Example" value={phrase.example || "Add a natural example to make this phrase easier to recall."} /><DetailItem label="Status" value={phrase.status} /><DetailItem label="Encountered through" value={phrase.sourceType ?? "Manual"} /><DetailItem label="Last practiced" value={phrase.lastPracticedAt ? formatDate(phrase.lastPracticedAt) : "Not practiced yet"} /></div><div className="mt-8 flex gap-2"><Link href="/communication/phrases/practice" className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)]"><RotateCcw className="size-4" /> Practice</Link><Button variant="secondary" onClick={onArchive}><Archive className="mr-2 size-4" /> Archive</Button></div></aside></div>; }
+function DetailItem({ label, value }: { label: string; value: string }) { return <div><p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--foreground-muted)]">{label}</p><p className="mt-1 text-sm leading-6 text-[var(--foreground)]">{value}</p></div>; }
+function Field({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder: string }) { return <label className="block space-y-1"><span className="text-sm font-semibold text-[var(--foreground)]">{label}</span><input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="min-h-10 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--foreground)]" /></label>; }
+function EmptyPhraseState({ onAdd }: { onAdd: () => void }) { return <Card className="py-10 text-center"><BookOpen className="mx-auto size-7 text-[var(--foreground-muted)]" /><h2 className="mt-3 text-lg font-semibold text-[var(--foreground)]">No phrases yet</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--foreground-muted)]">Useful expressions from your conversations will appear here when you save them.</p><div className="mt-5 flex justify-center gap-2"><Button onClick={onAdd}><Plus className="mr-2 size-4" /> Add phrase</Button><Link href="/communication/practice/conversation" className="inline-flex min-h-11 items-center rounded-md border border-[var(--border)] px-4 text-sm font-semibold">Start a Conversation</Link></div></Card>; }
+function formatDate(value: string) { return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(value)); }

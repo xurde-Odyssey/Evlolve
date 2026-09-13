@@ -22,7 +22,7 @@ export function NavigationItem({
   variant = "sidebar",
 }: NavigationItemProps) {
   const pathname = usePathname();
-  const isActive = pathname === href;
+  const isActive = pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
 
   if (variant === "mobile") {
     return (

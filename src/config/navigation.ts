@@ -20,6 +20,12 @@ export const appRoutes: AppRoute[] = [
     icon: "activity",
   },
   {
+    href: "/communication",
+    label: "Communication",
+    description: "Practice natural English communication over time.",
+    icon: "communication",
+  },
+  {
     href: "/journey",
     label: "Journey",
     description: "Foundation route for progression history.",
@@ -83,6 +89,7 @@ export const logActivityRoute: AppRoute = {
 export const primaryRoutes: AppRoute[] = [
   getRoute("/dashboard"),
   getRoute("/quests"),
+  getRoute("/communication"),
   getRoute("/journey"),
   getRoute("/character"),
   getRoute("/reports"),
@@ -97,6 +104,7 @@ export const secondaryRoutes: AppRoute[] = [
 export const mobileRoutes: AppRoute[] = [
   getRoute("/dashboard"),
   getRoute("/quests"),
+  getRoute("/communication"),
   logActivityRoute,
   getRoute("/journey"),
   getRoute("/character"),

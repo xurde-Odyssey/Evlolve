@@ -12,6 +12,7 @@ export type NavigationIcon =
   | "award"
   | "boss"
   | "character"
+  | "communication"
   | "journey"
   | "overview"
   | "plus"
