@@ -11,7 +11,6 @@ import { DailyQuests } from "@/components/quests/daily-quests";
 import { getDashboardQuery } from "@/application/evolve/server/queries";
 import { completeWeeklyReminderAction, logBehaviorOccurrenceAction } from "./actions";
 import { lookupBookMetadata } from "@/lib/books/open-library";
-import Image from "next/image";
 
 export default async function DashboardPage() {
   const dashboard = await getDashboardQuery();
@@ -29,7 +28,6 @@ export default async function DashboardPage() {
           <ConsistencyOverview consistency={dashboard.consistency} />
         </div>
         <CharacterAttributes
-          attributes={dashboard.attributes}
           now={dashboard.now}
           timezone={dashboard.timePolicy.timezone}
         />
@@ -59,20 +57,6 @@ export default async function DashboardPage() {
         metadata={bookMetadata}
         completedBooks={dashboard.bookOverview.completedBooks}
       />
-      <div className="dashboard-wall-gallery" aria-label="Evolve focus artwork">
-        {["/background.png", "/seond.jpeg"].map((image, index) => (
-          <figure className="dashboard-wall-frame" key={image}>
-            <div className="dashboard-wall-frame-mat">
-              <Image
-                src={image}
-                alt={index === 0 ? "Focused personal development workspace" : "Personal development workspace"}
-                fill
-                sizes="(max-width: 768px) 100vw, 42rem"
-              />
-            </div>
-          </figure>
-        ))}
-      </div>
     </PageContainer>
   );
 }

@@ -43,9 +43,22 @@ export type FootballMatch = {
   };
 };
 
+export type SportsBestPick = {
+  matchId: string;
+  league: FootballLeague;
+  homeTeam: string;
+  awayTeam: string;
+  selection: "home" | "draw" | "away";
+  selectionLabel: string;
+  probability: number;
+  kickoff: string;
+  source: string;
+};
+
 export type SportsMarketData = {
   matches: FootballMatch[];
   leagues: Array<{ name: FootballLeague; matchCount: number }>;
+  bestPicks: SportsBestPick[];
 };
 
 export type MarketsData = {

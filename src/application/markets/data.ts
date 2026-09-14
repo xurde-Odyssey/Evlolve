@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { CryptoComparisonPeriod, CryptoMarketItem, FootballLeague, FootballMatch, MarketNewsItem, MarketsData, MarketsPeriod, MarketsTab, SportsMarketData, SportsRange } from "@/types/markets";
+import type { CryptoComparisonPeriod, CryptoMarketItem, FootballLeague, FootballMatch, MarketNewsItem, MarketsData, MarketsPeriod, MarketsTab, SportsBestPick, SportsMarketData, SportsRange } from "@/types/markets";
 
 const requestTimeoutMs = 8_000;
 
@@ -16,7 +16,7 @@ export async function getMarketsData(tab: MarketsTab, period: MarketsPeriod = "1
     return { tab, fetchedAt, crypto, hotItems: topGainers(crypto), warning: cryptoResult.status === "rejected" ? "Crypto data is temporarily unavailable. Try refreshing in a moment." : undefined };
   }
   const [sportsResult, cryptoResult] = await Promise.allSettled([getSports(period as SportsRange), getCrypto("1d")]);
-  return { tab, fetchedAt, sports: sportsResult.status === "fulfilled" ? sportsResult.value : { matches: [], leagues: footballLeagues.map((league) => ({ name: league.name, matchCount: 0 })) }, hotItems: cryptoResult.status === "fulfilled" ? topGainers(cryptoResult.value) : [] };
+  return { tab, fetchedAt, sports: sportsResult.status === "fulfilled" ? sportsResult.value : { matches: [], leagues: footballLeagues.map((league) => ({ name: league.name, matchCount: 0 })), bestPicks: [] }, hotItems: cryptoResult.status === "fulfilled" ? topGainers(cryptoResult.value) : [] };
 }
 
 async function getNews(): Promise<MarketNewsItem[]> {
@@ -81,7 +81,21 @@ async function getSports(range: SportsRange): Promise<SportsMarketData> {
     return matches.filter((match): match is FootballMatch => match !== null);
   }));
   const matches = results.flatMap((result) => result.status === "fulfilled" ? result.value : []).sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff));
-  return { matches, leagues: footballLeagues.map((league) => ({ name: league.name, matchCount: matches.filter((match) => match.league === league.name).length })) };
+  return { matches, leagues: footballLeagues.map((league) => ({ name: league.name, matchCount: matches.filter((match) => match.league === league.name).length })), bestPicks: getBestPicks(matches, today) };
+}
+
+function getBestPicks(matches: FootballMatch[], today: Date): SportsBestPick[] {
+  const todayKey = today.toISOString().slice(0, 10);
+  return matches.filter((match) => match.kickoff.startsWith(todayKey) && match.probabilities && !/final|full time|postponed|cancelled/i.test(match.status)).map((match) => {
+    const probabilities = match.probabilities!;
+    const options = [
+      { selection: "home" as const, selectionLabel: match.homeTeam, probability: probabilities.home },
+      { selection: "draw" as const, selectionLabel: "Draw", probability: probabilities.draw },
+      { selection: "away" as const, selectionLabel: match.awayTeam, probability: probabilities.away },
+    ];
+    const best = options.sort((a, b) => b.probability - a.probability)[0]!;
+    return { matchId: match.id, league: match.league, homeTeam: match.homeTeam, awayTeam: match.awayTeam, selection: best.selection, selectionLabel: best.selectionLabel, probability: best.probability, kickoff: match.kickoff, source: probabilities.source };
+  }).sort((a, b) => b.probability - a.probability).slice(0, 3);
 }
 
 type EspnScoreboard = {
