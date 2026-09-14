@@ -35,6 +35,12 @@ export type FootballMatch = {
   status: string;
   kickoff: string;
   venue?: string;
+  probabilities?: {
+    home: number;
+    draw: number;
+    away: number;
+    source: string;
+  };
 };
 
 export type SportsMarketData = {

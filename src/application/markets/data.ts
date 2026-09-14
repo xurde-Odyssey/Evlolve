@@ -71,13 +71,14 @@ async function getSports(range: SportsRange): Promise<SportsMarketData> {
   const dates = `${formatDateForProvider(today)}-${formatDateForProvider(end)}`;
   const results = await Promise.allSettled(footballLeagues.map(async (league) => {
     const payload = await getJson<EspnScoreboard>(`https://site.api.espn.com/apis/site/v2/sports/soccer/${league.code}/scoreboard?limit=30&dates=${dates}`);
-    return (payload.events ?? []).map((event): FootballMatch | null => {
+    const matches = await Promise.all((payload.events ?? []).slice(0, 8).map(async (event): Promise<FootballMatch | null> => {
       const competition = event.competitions?.[0];
       const home = competition?.competitors?.find((team) => team.homeAway === "home");
       const away = competition?.competitors?.find((team) => team.homeAway === "away");
       if (!event.id || !event.date || !home?.team?.displayName || !away?.team?.displayName) return null;
-      return { id: `${league.code}-${event.id}`, league: league.name, homeTeam: home.team.displayName, awayTeam: away.team.displayName, homeScore: home.score, awayScore: away.score, status: event.status?.type?.shortDetail ?? event.status?.type?.description ?? "Scheduled", kickoff: event.date, venue: competition?.venue?.fullName };
-    }).filter((match): match is FootballMatch => match !== null);
+      return { id: `${league.code}-${event.id}`, league: league.name, homeTeam: home.team.displayName, awayTeam: away.team.displayName, homeScore: home.score, awayScore: away.score, status: event.status?.type?.shortDetail ?? event.status?.type?.description ?? "Scheduled", kickoff: event.date, venue: competition?.venue?.fullName, probabilities: await getMatchProbabilities(league.code, event.id) };
+    }));
+    return matches.filter((match): match is FootballMatch => match !== null);
   }));
   const matches = results.flatMap((result) => result.status === "fulfilled" ? result.value : []).sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff));
   return { matches, leagues: footballLeagues.map((league) => ({ name: league.name, matchCount: matches.filter((match) => match.league === league.name).length })) };
@@ -92,6 +93,17 @@ type EspnScoreboard = {
       venue?: { fullName?: string };
       competitors?: Array<{ homeAway?: string; team?: { displayName?: string }; score?: string }>;
     }>;
+  }>;
+};
+
+type EspnSummary = {
+  pickcenter?: Array<{
+    provider?: { name?: string };
+    moneyline?: {
+      home?: { close?: { odds?: string } };
+      draw?: { close?: { odds?: string } };
+      away?: { close?: { odds?: string } };
+    };
   }>;
 };
 
@@ -136,6 +148,26 @@ function parseFeed(xml: string, source: string, language: "en" | "ne"): MarketNe
 function readTag(value: string, tag: string) { return value.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "i"))?.[1]?.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").trim() ?? ""; }
 function decodeXml(value: string) { return value.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">"); }
 function formatDateForProvider(value: Date) { return value.toISOString().slice(0, 10).replaceAll("-", ""); }
+
+async function getMatchProbabilities(league: string, eventId: string) {
+  try {
+    const summary = await getJson<EspnSummary>(`https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/summary?event=${eventId}`);
+    const market = summary.pickcenter?.[0];
+    if (!market) return undefined;
+    const home = parseAmericanOdds(market?.moneyline?.home?.close?.odds);
+    const draw = parseAmericanOdds(market?.moneyline?.draw?.close?.odds);
+    const away = parseAmericanOdds(market?.moneyline?.away?.close?.odds);
+    if (home === undefined || draw === undefined || away === undefined) return undefined;
+    return normalizedProbabilities(home, draw, away, market.provider?.name ?? "Market odds");
+  } catch {
+    return undefined;
+  }
+}
+
+function parseAmericanOdds(value?: string) { if (!value) return undefined; const parsed = Number(value.replace("+", "")); return Number.isFinite(parsed) ? parsed : undefined; }
+function normalizedProbabilities(home: number, draw: number, away: number, source: string) { const implied = [moneylineProbability(home), moneylineProbability(draw), moneylineProbability(away)]; const total = implied.reduce((sum, value) => sum + value, 0); const [homeProbability, drawProbability, awayProbability] = implied; if (!total || homeProbability === undefined || drawProbability === undefined || awayProbability === undefined) return undefined; return { home: Math.round((homeProbability / total) * 100), draw: Math.round((drawProbability / total) * 100), away: Math.round((awayProbability / total) * 100), source }; }
+
+function moneylineProbability(value: number) { return value >= 0 ? 100 / (value + 100) : -value / (-value + 100); }
 
 function sourceFromUrl(url: string) {
   try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return "External source"; }

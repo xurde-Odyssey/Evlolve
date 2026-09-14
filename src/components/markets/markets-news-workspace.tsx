@@ -10,9 +10,9 @@ import type { CryptoComparisonPeriod, CryptoMarketItem, FootballMatch, MarketNew
 type MarketTab = MarketsTab;
 
 const tabs: Array<{ id: MarketTab; label: string; icon: typeof Newspaper }> = [
-  { id: "news", label: "News", icon: Newspaper },
-  { id: "crypto", label: "Crypto Markets", icon: WalletCards },
   { id: "sports", label: "Sports", icon: Trophy },
+  { id: "crypto", label: "Crypto Markets", icon: WalletCards },
+  { id: "news", label: "News", icon: Newspaper },
 ];
 const comparisonPeriods: Array<{ id: CryptoComparisonPeriod; label: string }> = [
   { id: "1d", label: "1D" },
@@ -26,7 +26,7 @@ const sportsRanges: Array<{ id: SportsRange; label: string }> = [
 ];
 
 export function MarketsNewsWorkspace() {
-  const [activeTab, setActiveTab] = useState<MarketTab>("news");
+  const [activeTab, setActiveTab] = useState<MarketTab>("sports");
   const [comparisonPeriod, setComparisonPeriod] = useState<CryptoComparisonPeriod>("1d");
   const [sportsRange, setSportsRange] = useState<SportsRange>("1d");
   const [data, setData] = useState<MarketsData | null>(null);
@@ -72,7 +72,7 @@ export function MarketsNewsWorkspace() {
 
   // The initial request intentionally runs once; tab changes are handled by selectTab.
   useEffect(() => {
-    const timer = window.setTimeout(() => void loadFeed("news"), 0);
+    const timer = window.setTimeout(() => void loadFeed("sports"), 0);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -182,12 +182,13 @@ function SportsSummary({ data }: { data?: SportsMarketData }) {
   return <div className="space-y-5 p-4 sm:p-5">{data.leagues.map((league) => { const matches = data.matches.filter((match) => match.league === league.name); const logo = leagueLogo(league.name); return <section key={league.name} aria-labelledby={`league-${league.name}`}><div className="mb-2 flex items-center justify-between gap-3"><h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--foreground-muted)]"><span className="grid size-7 place-items-center rounded-md border border-[var(--border)] bg-[var(--surface-elevated)] text-[10px] font-bold tracking-normal text-[var(--foreground)]" aria-hidden="true">{logo ? <Image src={logo} alt="" width={20} height={20} className="size-5 object-contain" /> : leagueBadge(league.name)}</span><span id={`league-${league.name}`}>{league.name}</span></h3><span className="text-xs text-[var(--foreground-muted)]">{league.matchCount} {league.matchCount === 1 ? "match" : "matches"}</span></div>{matches.length ? <div className="divide-y divide-[var(--border)] rounded-md border border-[var(--border)]">{matches.slice(0, 8).map((match) => <MatchRow key={match.id} match={match} />)}</div> : <p className="rounded-md border border-dashed border-[var(--border)] px-3 py-3 text-xs text-[var(--foreground-muted)]">No scheduled matches in this window.</p>}</section>; })}</div>;
 }
 
-function MatchRow({ match }: { match: FootballMatch }) { return <div className="grid gap-2 px-3 py-3 sm:grid-cols-[7.5rem_1fr_auto] sm:items-center"><div className="text-xs text-[var(--foreground-muted)]"><p>{formatMatchTime(match.kickoff)}</p><p className="mt-0.5">{match.status}</p></div><div className="min-w-0 text-sm"><p className="truncate font-semibold text-[var(--foreground)]">{match.homeTeam}</p><p className="mt-1 truncate text-[var(--foreground-muted)]">{match.awayTeam}</p></div><div className="text-left text-sm font-semibold text-[var(--foreground)] sm:text-right"><p>{match.homeScore ?? "–"}</p><p className="mt-1">{match.awayScore ?? "–"}</p></div></div>; }
+function MatchRow({ match }: { match: FootballMatch }) { return <div className="grid gap-3 px-3 py-3 sm:grid-cols-[7.5rem_1fr_auto] sm:items-center"><div className="text-xs text-[var(--foreground-muted)]"><p>{formatMatchTime(match.kickoff)}</p><p className="mt-0.5">{match.status}</p></div><div className="min-w-0 text-sm"><p className="truncate font-semibold text-[var(--foreground)]">{match.homeTeam}</p><p className="mt-1 truncate text-[var(--foreground-muted)]">{match.awayTeam}</p>{match.probabilities && <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-[var(--foreground-muted)]" title={`Market estimate from ${match.probabilities.source}`}><span title={`${match.homeTeam} win probability`} className="rounded border border-[var(--border)] px-1.5 py-0.5"><strong className="font-bold text-[var(--foreground)]">{clubInitial(match.homeTeam)}</strong> {match.probabilities.home}%</span><span title="Draw probability" className="rounded border border-[var(--border)] px-1.5 py-0.5"><strong className="font-bold text-[var(--foreground)]">X</strong> {match.probabilities.draw}%</span><span title={`${match.awayTeam} win probability`} className="rounded border border-[var(--border)] px-1.5 py-0.5"><strong className="font-bold text-[var(--foreground)]">{clubInitial(match.awayTeam)}</strong> {match.probabilities.away}%</span></div>}</div><div className="text-left text-sm font-semibold text-[var(--foreground)] sm:text-right"><p>{match.homeScore ?? "–"}</p><p className="mt-1">{match.awayScore ?? "–"}</p></div></div>; }
 
 function PeriodSelector<T extends { id: string; label: string }>({ label, ariaLabel, periods, selected, onSelect }: { label: string; ariaLabel: string; periods: T[]; selected: string; onSelect: (id: T["id"]) => void }) { return <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3 sm:px-5"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--foreground-muted)]">{label}</p><div className="flex rounded-md border border-[var(--border)] bg-[var(--surface-elevated)] p-0.5" role="group" aria-label={ariaLabel}>{periods.map((period) => <button key={period.id} type="button" onClick={() => onSelect(period.id)} className={cn("min-h-8 rounded px-2.5 text-xs font-semibold text-[var(--foreground-muted)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--foreground)]", selected === period.id && "bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-soft)]")}>{period.label}</button>)}</div></div>; }
 
 function leagueBadge(name: string) { return ({ "Premier League": "PL", "La Liga": "LL", "Serie A": "SA", Bundesliga: "BL", "Ligue 1": "L1", "UEFA Champions League": "UCL" } as Record<string, string>)[name] ?? <CircleDot aria-hidden="true" className="size-3.5" />; }
 function leagueLogo(name: string) { return ({ "Premier League": "/Pl.jpg", "La Liga": "/LL.png", "Serie A": "/SA.png", Bundesliga: "/BL.jpg", "Ligue 1": "/L1.png", "UEFA Champions League": "/ucl.png" } as Record<string, string>)[name]; }
+function clubInitial(name: string) { return name.trim().charAt(0).toUpperCase(); }
 
 function HotItems({ items }: { items: CryptoMarketItem[] }) { return items.length ? <div className="space-y-2 border-t border-[var(--border)] pt-4">{items.map((item) => <div key={item.id} className="flex items-center justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-[var(--foreground)]">{item.name}</p><p className="text-xs uppercase text-[var(--foreground-muted)]">{item.symbol}</p></div><div className="text-right"><p className="text-sm font-semibold text-[var(--foreground)]">{formatUsd(item.priceUsd)}</p><p className="text-xs font-semibold text-[var(--foreground-muted)]">{formatPercent(item.change24h)}</p></div></div>)}</div> : <div className="border-t border-[var(--border)] pt-4 text-sm text-[var(--foreground-muted)]">Top gainers are unavailable right now.</div>; }
 function FeedLoading() { return <div className="space-y-3 p-5" aria-live="polite"><div className="h-14 animate-pulse rounded-md bg-[var(--surface-elevated)]" /><div className="h-14 animate-pulse rounded-md bg-[var(--surface-elevated)]" /><div className="h-14 animate-pulse rounded-md bg-[var(--surface-elevated)]" /></div>; }
