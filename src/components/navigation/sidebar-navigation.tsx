@@ -2,7 +2,7 @@ import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { signOutAction } from "@/app/auth/actions";
 import { LogoMark } from "@/components/brand/logo-mark";
-import { primaryRoutes, secondaryRoutes } from "@/config/navigation";
+import { primaryRoutes } from "@/config/navigation";
 import { APP_NAME } from "@/lib/constants/app";
 import { LogActivityAction } from "./log-activity-action";
 import { NavigationItem } from "./navigation-item";
@@ -27,7 +27,7 @@ export function SidebarNavigation() {
           <LogActivityAction />
         </div>
 
-        <nav aria-label="Primary navigation" className="mt-7 space-y-1.5">
+        <nav aria-label="Main navigation" className="mt-7 space-y-1.5">
           {primaryRoutes.map((route) => (
             <NavigationItem
               key={route.href}
@@ -37,19 +37,6 @@ export function SidebarNavigation() {
             />
           ))}
         </nav>
-
-        <div className="mt-7 border-t border-[var(--border)] pt-5">
-          <nav aria-label="Secondary navigation" className="space-y-1.5">
-            {secondaryRoutes.map((route) => (
-              <NavigationItem
-                key={route.href}
-                href={route.href}
-                icon={route.icon}
-                label={route.label}
-              />
-            ))}
-          </nav>
-        </div>
 
         <div className="mt-auto border-t border-[var(--border)] pt-4">
           <form action={signOutAction}>

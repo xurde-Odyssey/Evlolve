@@ -14,6 +14,7 @@ export type NavigationIcon =
   | "character"
   | "communication"
   | "journey"
+  | "markets"
   | "overview"
   | "plus"
   | "quests"

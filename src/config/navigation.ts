@@ -26,6 +26,12 @@ export const appRoutes: AppRoute[] = [
     icon: "communication",
   },
   {
+    href: "/markets",
+    label: "Markets & News",
+    description: "A focused view for news, crypto markets, and top-flight football.",
+    icon: "markets",
+  },
+  {
     href: "/journey",
     label: "Journey",
     description: "Foundation route for progression history.",
@@ -90,16 +96,16 @@ export const primaryRoutes: AppRoute[] = [
   getRoute("/dashboard"),
   getRoute("/quests"),
   getRoute("/communication"),
+  getRoute("/markets"),
   getRoute("/journey"),
   getRoute("/character"),
   getRoute("/reports"),
-];
-
-export const secondaryRoutes: AppRoute[] = [
   getRoute("/hub"),
   getRoute("/notepad"),
   getRoute("/settings"),
 ];
+
+export const secondaryRoutes: AppRoute[] = [];
 
 export const mobileRoutes: AppRoute[] = [
   getRoute("/dashboard"),
