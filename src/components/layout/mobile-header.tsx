@@ -5,7 +5,7 @@ import { useState } from "react";
 import { signOutAction } from "@/app/auth/actions";
 import { LogoMark } from "@/components/brand/logo-mark";
 import { NavigationItem } from "@/components/navigation/navigation-item";
-import { secondaryRoutes } from "@/config/navigation";
+import { mobileMoreRoutes } from "@/config/navigation";
 import { APP_NAME } from "@/lib/constants/app";
 
 export function MobileHeader() {
@@ -39,7 +39,7 @@ export function MobileHeader() {
         >
           <p className="mobile-header-menu-label">More</p>
           <nav aria-label="Mobile secondary navigation" className="space-y-1">
-            {secondaryRoutes.map((route) => (
+            {mobileMoreRoutes.map((route) => (
               <NavigationItem
                 key={route.href}
                 href={route.href}

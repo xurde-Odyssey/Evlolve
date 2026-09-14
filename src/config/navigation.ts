@@ -107,6 +107,14 @@ export const primaryRoutes: AppRoute[] = [
 
 export const secondaryRoutes: AppRoute[] = [];
 
+export const mobileMoreRoutes: AppRoute[] = [
+  getRoute("/markets"),
+  getRoute("/reports"),
+  getRoute("/hub"),
+  getRoute("/notepad"),
+  getRoute("/settings"),
+];
+
 export const mobileRoutes: AppRoute[] = [
   getRoute("/dashboard"),
   getRoute("/quests"),
