@@ -6,6 +6,7 @@ import { primaryRoutes } from "@/config/navigation";
 import { APP_NAME } from "@/lib/constants/app";
 import { LogActivityAction } from "./log-activity-action";
 import { NavigationItem } from "./navigation-item";
+import { JourneySubNavigation } from "./journey-sub-navigation";
 
 export function SidebarNavigation() {
   return (
@@ -29,12 +30,10 @@ export function SidebarNavigation() {
 
         <nav aria-label="Main navigation" className="mt-7 space-y-1.5">
           {primaryRoutes.map((route) => (
-            <NavigationItem
-              key={route.href}
-              href={route.href}
-              icon={route.icon}
-              label={route.label}
-            />
+            <div key={route.href}>
+              <NavigationItem href={route.href} icon={route.icon} label={route.label} />
+              {route.href === "/journey" ? <JourneySubNavigation /> : null}
+            </div>
           ))}
         </nav>
 

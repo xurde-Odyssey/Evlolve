@@ -1,19 +1,12 @@
-import { JourneyTimeline } from "@/components/journey/journey-timeline";
+import { JourneyWorkspace } from "@/components/journey/journey-workspace";
 import { PageContainer } from "@/components/layout/page-container";
-import { PageHeader } from "@/components/layout/page-header";
-import { getJourneyViewModel } from "@/application/evolve";
 import { getCurrentEvolveState } from "@/application/evolve/server/queries";
+import { createJourneySeed } from "@/application/journey/seed";
 
 export default async function JourneyPage() {
   const state = await getCurrentEvolveState();
 
   return (
-    <PageContainer className="journey-page-surface">
-      <PageHeader
-        eyebrow="/journey"
-        title="Your Journey"
-      />
-      <JourneyTimeline journey={getJourneyViewModel(state)} />
-    </PageContainer>
+    <PageContainer className="journey-page-surface"><JourneyWorkspace initialData={createJourneySeed(state.profile?.goals?.[0])} /></PageContainer>
   );
 }

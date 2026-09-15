@@ -115,6 +115,12 @@ export const mobileMoreRoutes: AppRoute[] = [
   getRoute("/settings"),
 ];
 
+export const journeySubRoutes = [
+  { href: "/journey/mind-map", label: "Roadmap" },
+  { href: "/journey/diary", label: "Diary" },
+  { href: "/journey/timeline", label: "Timeline" },
+] as const;
+
 export const mobileRoutes: AppRoute[] = [
   getRoute("/dashboard"),
   getRoute("/quests"),

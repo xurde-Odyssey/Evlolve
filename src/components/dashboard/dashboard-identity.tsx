@@ -34,7 +34,7 @@ export function DashboardIdentity({ character }: DashboardIdentityProps) {
               <CoreStone level={character.level} highestLevel={character.highestLevel} size="sm" />
             </div>
             <div className="min-w-0">
-              <p className="journal-copy truncate text-base font-semibold text-[var(--foreground)] sm:text-xl">Good afternoon, {character.name}</p>
+              <p className="journal-copy truncate text-base font-semibold text-[var(--primary)] sm:text-xl">Good afternoon, {character.name}</p>
               <p className="journal-copy mt-1 truncate text-xs italic text-[var(--foreground-muted)] sm:text-sm">Continue evolving · {stage.key}</p>
             </div>
           </div>

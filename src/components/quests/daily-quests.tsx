@@ -55,7 +55,7 @@ export function DailyQuests({
           <Link
             href="/activities"
             aria-label={`Today's exercise, ${completedCount} of ${totalCount} completed`}
-            className="inline-flex min-h-10 items-center justify-between gap-4 rounded-md bg-[var(--accent-subtle)] px-3 py-2 text-sm font-semibold text-[var(--accent-pro)] transition hover:bg-[var(--accent-pro)]/12 focus-visible:outline-offset-2"
+            className="inline-flex min-h-10 items-center justify-between gap-4 rounded-md bg-[var(--accent-primary-subtle)] px-3 py-2 text-sm font-semibold text-[var(--accent-primary)] transition hover:bg-[var(--accent-primary)]/12 focus-visible:outline-offset-2"
           >
             <span className="inline-flex items-center gap-2">
               <ClipboardPenLine aria-hidden="true" className="size-4" strokeWidth={1.9} />
@@ -213,14 +213,14 @@ function WeeklyActivityCalendar({
               className={cn(
                 "min-w-0 rounded-md border px-1 py-2 text-center",
                 isToday
-                  ? "border-[var(--accent-pro)] bg-[var(--accent-subtle)]"
+                  ? "border-[var(--accent-primary)] bg-[var(--accent-primary-subtle)]"
                   : "border-[var(--border)] bg-[var(--background)]",
               )}
             >
               <p className="text-[0.65rem] font-semibold uppercase text-[var(--foreground-muted)]">
                 {dayLabel(day)}
               </p>
-              <p className={cn("numeric mt-1 font-mono text-sm font-semibold", isToday ? "text-[var(--accent-pro)]" : "text-[var(--foreground)]")}>
+              <p className={cn("numeric mt-1 font-mono text-sm font-semibold", isToday ? "text-[var(--accent-primary)]" : "text-[var(--foreground)]")}>
                 {day.slice(-2)}
               </p>
               <p className="mt-1 text-[0.62rem] font-semibold text-[var(--foreground-muted)]">
@@ -251,14 +251,14 @@ function WeeklyActivityCalendar({
                   <Link
                     href="/activities"
                     aria-label={`Log ${row.title}`}
-                    className="group flex min-w-0 items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-pro)]"
+                    className="group flex min-w-0 items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-primary)]"
                   >
-                    <span className="grid size-7 shrink-0 place-items-center rounded-md bg-[var(--accent-subtle)] text-[var(--accent-pro)]"><Icon aria-hidden="true" className="size-3.5" /></span>
-                    <span className="truncate text-sm font-semibold text-[var(--foreground)] transition group-hover:text-[var(--accent-pro)]">{row.title}</span>
+                    <span className="grid size-7 shrink-0 place-items-center rounded-md bg-[var(--accent-primary-subtle)] text-[var(--accent-primary)]"><Icon aria-hidden="true" className="size-3.5" /></span>
+                    <span className="truncate text-sm font-semibold text-[var(--foreground)] transition group-hover:text-[var(--accent-primary)]">{row.title}</span>
                   </Link>
                   <span className={cn(
                     "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold",
-                    complete ? "bg-[var(--accent-subtle)] text-[var(--accent-pro)]" : "bg-[var(--surface-elevated)] text-[var(--foreground-muted)]",
+                    complete ? "bg-[var(--success-subtle)] text-[var(--success)]" : "bg-[var(--surface-elevated)] text-[var(--foreground-muted)]",
                   )}>
                     {complete ? <CheckCircle2 aria-hidden="true" className="size-3.5" /> : <Circle aria-hidden="true" className="size-3.5" />}
                     {complete ? "Completed" : "Not recorded"}
@@ -301,10 +301,10 @@ function WeeklyActivityCalendar({
                   <Link
                     href="/activities"
                     aria-label={`Log ${row.title}`}
-                    className="group flex min-w-0 items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-pro)]"
+                    className="group flex min-w-0 items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-primary)]"
                   >
-                    <span className="grid size-7 shrink-0 place-items-center rounded-md bg-[var(--accent-subtle)] text-[var(--accent-pro)]"><Icon aria-hidden="true" className="size-3.5" /></span>
-                    <span className="truncate text-xs font-semibold text-[var(--foreground)] transition group-hover:text-[var(--accent-pro)]">{row.title}</span>
+                    <span className="grid size-7 shrink-0 place-items-center rounded-md bg-[var(--accent-primary-subtle)] text-[var(--accent-primary)]"><Icon aria-hidden="true" className="size-3.5" /></span>
+                    <span className="truncate text-xs font-semibold text-[var(--foreground)] transition group-hover:text-[var(--accent-primary)]">{row.title}</span>
                   </Link>
                   {days.map((day) => {
                     const requirement = requirementForDay(row.commitmentId, day, weeklyRequirements);
@@ -317,7 +317,7 @@ function WeeklyActivityCalendar({
                         className={cn(
                           "grid size-7 place-items-center rounded-md border",
                           complete
-                            ? "border-[var(--accent-pro)] bg-[var(--accent-pro)] text-white"
+                              ? "border-[var(--foreground-muted)] bg-[var(--foreground-muted)] text-white"
                             : scheduled
                               ? "border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--foreground-muted)]"
                               : "border-transparent bg-transparent text-transparent",
@@ -366,7 +366,7 @@ function QuestHeatMap({
       <div className="grid gap-4 lg:grid-cols-[minmax(12rem,0.72fr)_minmax(0,1.28fr)] lg:gap-5">
         <aside className="rounded-sm border-b border-[var(--foreground-muted)]/35 pb-4 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-5" aria-label="Definition of consistency">
           <p className="font-serif text-4xl font-semibold leading-none tracking-tight text-[var(--foreground)] sm:text-5xl">{definition.word}</p>
-          <p className="mt-3 font-serif text-xs italic text-[var(--foreground-muted)]">{definition.pronunciation} &nbsp; noun &bull; English</p>
+          <p className="mt-3 font-serif text-xs italic text-[var(--text-secondary)]">{definition.pronunciation} &nbsp; noun &bull; English</p>
           <div className="my-3 border-t border-[var(--foreground-muted)]/55" />
           <p className="font-serif text-sm leading-6 text-[var(--foreground)] sm:text-[15px]">{definition.description}</p>
         </aside>
@@ -468,7 +468,7 @@ function WeeklyReminderSummary({ reminders }: { reminders: WeeklyReminder[] }) {
       <ul className="grid gap-2 sm:grid-cols-2">
         {visibleReminders.map((reminder) => (
           <li key={reminder.id} className="flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm">
-            {reminder.completed ? <CheckCircle2 aria-hidden="true" className="size-4 text-[var(--accent-pro)]" /> : <Circle aria-hidden="true" className="size-4 text-[var(--foreground-muted)]" />}
+            {reminder.completed ? <CheckCircle2 aria-hidden="true" className="size-4 text-[var(--success)]" /> : <Circle aria-hidden="true" className="size-4 text-[var(--foreground-muted)]" />}
             <span className={cn("truncate font-semibold", reminder.completed ? "text-[var(--foreground-muted)]" : "text-[var(--foreground)]")}>{reminder.title}</span>
           </li>
         ))}
@@ -512,7 +512,7 @@ function QuestStatusIcon({ status }: { status: QuestStatus }) {
     return (
       <CheckCircle2
         aria-hidden="true"
-        className={`${className} text-[var(--accent-pro)]`}
+        className={`${className} text-[var(--success)]`}
         focusable="false"
         strokeWidth={1.9}
       />

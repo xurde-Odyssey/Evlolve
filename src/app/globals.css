@@ -3,16 +3,23 @@
 :root {
   color-scheme: light;
 
-  --card: #f5f5f5;
-  --card-foreground: #333;
+  --text-primary: #171717;
+  --text-secondary: #5f6368;
+  --text-muted: #8a8a84;
+  --accent-primary: #315e73;
+  --accent-secondary: #8c5e58;
+  --status-success: #557a5e;
+  --surface-soft: #f7f7f5;
+  --card: var(--surface-soft);
+  --card-foreground: var(--text-primary);
   --popover: oklch(100% 0 0);
   --popover-foreground: oklch(14.5% 0 0);
-  --primary: #333;
-  --primary-foreground: oklch(98.5% 0 0);
+  --primary: var(--accent-primary);
+  --primary-foreground: #ffffff;
   --secondary: #f7f7f7;
-  --secondary-foreground: oklch(20.5% 0 0);
+  --secondary-foreground: var(--text-secondary);
   --muted: #f7f7f7;
-  --muted-foreground: oklch(55.6% 0 0);
+  --muted-foreground: var(--text-muted);
   --accent: oklch(95% 0 0);
   --accent-foreground: oklch(20.5% 0 0);
   --color-fd-accent: oklch(97% 0 0);
@@ -37,10 +44,10 @@
   --sidebar-border: oklch(92.2% 0 0);
   --sidebar-ring: oklch(70.8% 0 0);
   --color-fd-primary: oklch(0% 0 0);
-  --surface: #f7f7f7;
-  --accent-pro: #f12e54;
+  --surface: #ffffff;
+  --accent-pro: var(--accent-secondary);
   --background: oklch(100% 0 0);
-  --foreground: #333;
+  --foreground: var(--text-primary);
 
   --color-deep: var(--primary);
   --color-mid: var(--accent-pro);
@@ -48,13 +55,14 @@
   --color-warm: var(--background);
 
   --surface-elevated: var(--card);
-  --foreground-muted: var(--muted-foreground);
-  --success: #f12e54;
+  --foreground-muted: var(--text-muted);
+  --success: var(--status-success);
   --warning: #9a7446;
   --xp: var(--accent-pro);
   --chrome-surface: var(--sidebar);
   --emphasis-border: var(--sidebar-border);
   --accent-subtle: color-mix(in srgb, var(--accent-pro) 10%, transparent);
+  --accent-primary-subtle: color-mix(in srgb, var(--accent-primary) 10%, transparent);
   --success-subtle: color-mix(in srgb, var(--success) 12%, transparent);
   --warning-subtle: color-mix(in srgb, var(--warning) 10%, transparent);
   --streak-calm: oklch(62% 0.13 238);
@@ -716,10 +724,12 @@ html[data-visual-mode="minimal"] .app-content h3 {
   font-family: var(--font-note), "Segoe Print", cursive;
   font-weight: 600;
   letter-spacing: 0;
+  color: #315e73;
 }
 
 html[data-visual-mode="minimal"] .journal-copy {
   font-family: var(--font-note), "Segoe Print", cursive;
+  color: #315e73;
 }
 
 html[data-visual-mode="minimal"] .app-content .notebook-card {
